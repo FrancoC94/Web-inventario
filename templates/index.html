@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRIVEFLOW PRO</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#38bdf8">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DriveFlow">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Panel de control e inventario inteligente de repuestos">
+
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+    <div class="topbar-left">
+        <span class="logo-sm">DRIVE<span>FLOW</span></span>
+    </div>
+    <div class="topbar-right">
+        <a href="/perfil" class="user-info" style="text-decoration:none;cursor:pointer">👤 {{ session.get('user_nombre','Usuario') }}</a>
+        <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
+        <a href="/historial" class="btn-alerta" style="text-decoration:none">📋 Historial</a>
+        {% if session.get('user_rol') == 'admin' %}
+        <a href="/usuarios" class="btn-alerta" style="text-decoration:none">👥 Usuarios</a>
+        {% endif %}
+        <button class="btn-alerta" onclick="toggleAlertas()" id="btnAlerta">
+            🔔 <span class="badge-count" id="badgeCount" style="display:none">0</span>
+        </button>
+        <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        <a href="/logout" class="btn-logout">Salir →</a>
+    </div>
+</nav>
+
+<!-- PANEL ALERTAS -->
+<div class="alertas-overlay" id="alertasOverlay" onclick="toggleAlertas()"></div>
+<aside class="alertas-panel" id="alertasPanel">
+    <div class="alertas-header">
+        <span>🚨 Alertas de Inventario</span>
+        <button onclick="toggleAlertas()">✕</button>
+    </div>
+    <div class="alertas-body" id="alertasBody">
+        <p class="alertas-empty">Cargando...</p>
+    </div>
+</aside>
+
+<!-- TOAST -->
+<div id="toasts"></div>
+
+<div class="container">
+
+    <header class="site-header">
+        <h1 class="logo-main">DRIVE<span>FLOW</span> <em>PRO</em></h1>
+        <p class="tagline">Panel de Control · Inventario Inteligente</p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for cat, msg in messages %}
+            <div class="flash flash-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- KPIs -->
+    <div class="kpis">
+        <div class="kpi kpi-blue">
+            <small>💰 CAPITAL + GANANCIA</small>
+            <strong>${{ "{:,.2f}".format(inversion + ganancia) }}</strong>
+        </div>
+        <div class="kpi kpi-green">
+            <small>🚀 VENTAS DE HOY</small>
+            <strong style="color:var(--success)">${{ "{:,.2f}".format(total_hoy) }}</strong>
+        </div>
+        <div class="kpi kpi-yellow">
+            <small>🏆 PRODUCTO ESTRELLA</small>
+            <strong style="font-size:1.1em">{{ estrella }}</strong>
+        </div>
+        <div class="kpi kpi-red">
+            <small>🛒 PEDIDO SUGERIDO</small>
+            <strong style="color:var(--danger)">${{ "{:,.2f}".format(inversion_sugerida) }}</strong>
+            <button onclick="copiarPedido()" class="btn btn-sm btn-primary" style="margin-top:8px">📋 Copiar pedido</button>
+        </div>
+    </div>
+
+    <!-- BUSCADOR + EXCEL -->
+    <div class="toolbar card">
+        <form action="/" method="GET" style="flex:1">
+            <input type="text" name="buscar" placeholder="🔍 Buscar repuesto..." value="{{ request.args.get('buscar','') }}" autocomplete="off">
+        </form>
+        <form action="/subir_masivo" method="POST" enctype="multipart/form-data">
+            <label class="btn btn-outline">
+                📁 Cargar Excel
+                <input type="file" name="archivo_excel" accept=".xlsx,.xls" onchange="this.form.submit()" style="display:none">
+            </label>
+        </form>
+    </div>
+
+    <!-- FORM AGREGAR -->
+    <form action="/agregar" method="POST" class="card form-add">
+        <input type="text"   name="nombre"  placeholder="Nombre del repuesto" required>
+        <input type="number" name="p_costo" placeholder="Costo $"   step="0.01" min="0.01" required>
+        <input type="number" name="p_venta" placeholder="Venta $"   step="0.01" min="0.01" required>
+        <input type="number" name="stock"   placeholder="Cantidad"  min="0"     required>
+        <button type="submit" class="btn btn-primary">➕ Registrar</button>
+    </form>
+
+    <!-- TABLA INVENTARIO -->
+    <div class="card card-table">
+        <table>
+            <thead>
+                <tr><th>Producto</th><th>Costo</th><th>Venta</th><th>Stock</th><th>Acciones</th></tr>
+            </thead>
+            <tbody id="tbodyInventario">
+            {% for p in inventario %}
+            <tr class="fila" data-id="{{ p.id }}">
+                <td class="td-left"><b>{{ p.nombre }}</b></td>
+                <td>${{ "{:,.2f}".format(p.p_costo) }}</td>
+                <td style="color:var(--primary);font-weight:700">${{ "{:,.2f}".format(p.p_venta) }}</td>
+                <td>
+                    <span class="stock-badge stock-{{ p.estado_stock }}">
+                        {% if p.estado_stock=='agotado' %}💀
+                        {% elif p.estado_stock=='critico' %}🔴
+                        {% elif p.estado_stock=='bajo' %}🟡
+                        {% else %}🟢{% endif %}
+                        {{ p.stock }} uds
+                    </span>
+                </td>
+                <td>
+                    <div class="actions">
+                        <form action="/vender/{{ p.id }}" method="POST" onsubmit="return onVender(event,this)">
+                            <input type="number" name="cantidad_venta" value="1" min="1" max="{{ p.stock }}" class="qty">
+                            <button type="submit" class="btn btn-success btn-sm">Vender</button>
+                        </form>
+                        <button class="btn btn-outline btn-sm" onclick="abrirEditar('{{ p.id }}','{{ p.nombre }}','{{ p.p_costo }}','{{ p.p_venta }}','{{ p.stock }}')">✏️</button>
+                        <a href="/eliminar_producto/{{ p.id }}" class="btn btn-outline btn-sm btn-red" onclick="return onEliminar(event,this,'{{ p.nombre }}')">🗑️</a>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="empty">Sin resultados en inventario.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ÚLTIMOS MOVIMIENTOS -->
+    <h3 class="sec-title">📝 Últimos Movimientos</h3>
+    <div class="card card-table">
+        <table>
+            <thead>
+                <tr><th>Hora</th><th>Repuesto</th><th>Cant.</th><th>Total</th><th>Acción</th></tr>
+            </thead>
+            <tbody>
+            {% for v in ventas %}
+            <tr>
+                <td>{{ v.fecha.strftime('%d/%m %H:%M') }}</td>
+                <td>{{ v.repuesto.nombre }}</td>
+                <td>{{ v.cantidad }}</td>
+                <td style="color:var(--success);font-weight:700">+${{ "{:,.2f}".format(v.total_venta) }}</td>
+                <td><a href="/eliminar_venta/{{ v.id }}" class="link-danger" onclick="return confirm('¿Anular venta?')">❌ Anular</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="empty">Sin movimientos hoy.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal" id="modalEditar">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3>✏️ Editar Repuesto</h3>
+        <form id="formEditar" method="POST">
+            <label class="flabel">Nombre
+                <input type="text" name="nombre" id="eNombre" required>
+            </label>
+            <div class="frow">
+                <label class="flabel">Costo $<input type="number" step="0.01" min="0.01" name="p_costo" id="eCosto" required></label>
+                <label class="flabel">Venta $<input type="number" step="0.01" min="0.01" name="p_venta" id="eVenta" required></label>
+            </div>
+            <label class="flabel">Stock<input type="number" min="0" name="stock" id="eStock" required></label>
+            <div class="modal-btns">
+                <button type="submit" class="btn btn-primary">💾 Guardar</button>
+                <button type="button" class="btn btn-outline" onclick="cerrarModal()">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ASISTENTE IA -->
+<button id="iaBtn" onclick="toggleIA()" title="Asistente IA">🤖</button>
+<div id="iaPanel">
+    <div class="ia-head">
+        <div>
+            <div class="ia-titulo">✨ ASISTENTE IA</div>
+            <div class="ia-sub">Powered by DriveFlow</div>
+        </div>
+        <button onclick="toggleIA()" class="ia-cerrar">✕</button>
+    </div>
+    <div id="iaLog" class="ia-log">
+        <div class="ia-msg bot">
+            <span class="ia-av">🤖</span>
+            <div class="ia-burbuja">👋 Hola! Soy el asistente de DriveFlow.<br>Puedo ayudarte con stock, ventas, alertas y análisis. ¿Qué necesitas?</div>
+        </div>
+    </div>
+    <div class="ia-chips">
+        <button onclick="pregunta('¿Qué productos tienen stock crítico?')">🚨 Stock crítico</button>
+        <button onclick="pregunta('¿Cómo van las ventas de hoy?')">💰 Ventas hoy</button>
+        <button onclick="pregunta('Dame un resumen general')">📋 Resumen</button>
+        <button onclick="pregunta('¿Qué productos tienen mejor margen?')">📊 Márgenes</button>
+    </div>
+    <div class="ia-footer">
+        <input type="text" id="iaInput" placeholder="Escribe tu pregunta..." onkeypress="if(event.key==='Enter')enviarIA()">
+        <button onclick="enviarIA()" class="btn btn-primary btn-sm">→</button>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<!-- PWA: Botón instalar -->
+<div id="pwaBar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f172a;border-top:1px solid #1e3a5f;padding:12px 20px;display:none;align-items:center;justify-content:space-between;gap:12px;z-index:400;box-shadow:0 -4px 20px rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;gap:10px">
+        <img src="/static/icons/icon-192.png" style="width:36px;height:36px;border-radius:8px">
+        <div>
+            <div style="font-weight:700;font-size:.88em;color:#f1f5f9">Instalar DriveFlow PRO</div>
+            <div style="font-size:.75em;color:#94a3b8">Agregar a pantalla de inicio</div>
+        </div>
+    </div>
+    <div style="display:flex;gap:8px">
+        <button onclick="instalarPWA()" style="background:#38bdf8;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:700;font-size:.82em;cursor:pointer">📱 Instalar</button>
+        <button onclick="document.getElementById('pwaBar').style.display='none'" style="background:transparent;color:#94a3b8;border:1px solid #334155;padding:8px 12px;border-radius:8px;font-size:.82em;cursor:pointer">✕</button>
+    </div>
+</div>
+
+<script>
+// ── Service Worker ─────────────────────────────────
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/static/sw.js')
+            .then(reg => console.log('✅ SW registrado:', reg.scope))
+            .catch(err => console.log('SW error:', err));
+    });
+}
+
+// ── Botón instalar PWA ─────────────────────────────
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const bar = document.getElementById('pwaBar');
+    bar.style.display = 'flex';
+    // Agregar padding al body para que no tape contenido
+    document.body.style.paddingBottom = '80px';
+});
+
+function instalarPWA() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r => {
+        if (r.outcome === 'accepted') {
+            document.getElementById('pwaBar').style.display = 'none';
+            document.body.style.paddingBottom = '';
+        }
+        deferredPrompt = null;
+    });
+}
+
+window.addEventListener('appinstalled', () => {
+    document.getElementById('pwaBar').style.display = 'none';
+    document.body.style.paddingBottom = '';
+    console.log('✅ DriveFlow PWA instalada');
+});
+</script>
+</body>
+</html>

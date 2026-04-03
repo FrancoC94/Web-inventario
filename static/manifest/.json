@@ -1,0 +1,33 @@
+{
+  "name": "DriveFlow PRO",
+  "short_name": "DriveFlow",
+  "description": "Panel de Control e Inventario Inteligente de Repuestos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0f1e",
+  "theme_color": "#38bdf8",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Inventario",
+      "url": "/",
+      "description": "Ver inventario"
+    }
+  ]
+}

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial · DriveFlow PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .page-title { font-family:'Rajdhani',sans-serif; font-size:1.8em; font-weight:700; letter-spacing:2px; margin-bottom:20px; }
+        .page-title span { color:var(--primary); }
+        .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--muted); text-decoration:none; font-size:.85em; margin-bottom:16px; transition:color .2s; }
+        .back-link:hover { color:var(--primary); }
+
+        /* Filtros */
+        .filtros { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:18px 20px; margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+        .filtro-grupo { display:flex; flex-direction:column; gap:5px; font-size:.78em; font-weight:600; color:var(--muted); }
+        .filtro-grupo input, .filtro-grupo select { min-width:140px; }
+        select { background:var(--panel2); color:var(--text); border:1px solid var(--border); padding:10px 14px; border-radius:10px; outline:none; font-family:inherit; font-size:.9em; transition:border-color .2s; }
+        select:focus { border-color:var(--primary); }
+
+        /* Badges acción */
+        .accion-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:.72em; font-weight:700; white-space:nowrap; }
+        .accion-VENDIDO  { background:rgba(16,185,129,.15);  color:var(--success); border:1px solid rgba(16,185,129,.3); }
+        .accion-AGREGADO { background:rgba(56,189,248,.15);  color:var(--primary); border:1px solid rgba(56,189,248,.3); }
+        .accion-EDITADO  { background:rgba(245,158,11,.15);  color:var(--warning); border:1px solid rgba(245,158,11,.3); }
+        .accion-ANULADO  { background:rgba(239,68,68,.15);   color:var(--danger);  border:1px solid rgba(239,68,68,.3); }
+
+        /* Stock diff */
+        .diff-pos { color:var(--success); font-weight:700; }
+        .diff-neg { color:var(--danger);  font-weight:700; }
+        .diff-neu { color:var(--muted);   font-weight:700; }
+
+        /* Paginación */
+        .paginacion { display:flex; justify-content:center; align-items:center; gap:8px; margin-top:20px; flex-wrap:wrap; }
+        .pag-btn { background:var(--panel); border:1px solid var(--border); color:var(--text); padding:7px 14px; border-radius:8px; text-decoration:none; font-size:.82em; font-weight:600; transition:var(--t); }
+        .pag-btn:hover { border-color:var(--primary); color:var(--primary); }
+        .pag-btn.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+        .pag-btn.disabled { opacity:.3; pointer-events:none; }
+
+        /* Timeline dot */
+        .dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+        .dot-VENDIDO  { background:var(--success); }
+        .dot-AGREGADO { background:var(--primary); }
+        .dot-EDITADO  { background:var(--warning); }
+        .dot-ANULADO  { background:var(--danger);  }
+
+        tbody tr { animation:rowIn .3s ease both; }
+        @keyframes rowIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+        .empty-state { text-align:center; padding:60px 20px; opacity:.4; }
+        .empty-state div { font-size:2.5em; margin-bottom:12px; }
+        .empty-state p { font-size:.88em; }
+
+        .total-info { font-size:.78em; color:var(--muted); padding:8px 0; }
+        strong.hi { color:var(--primary); }
+    </style>
+</head>
+<body>
+
+<nav class="topbar">
+    <div class="topbar-left">
+        <span class="logo-sm">DRIVE<span>FLOW</span></span>
+    </div>
+    <div class="topbar-right">
+        <span class="user-info">👤 {{ session.get('user_nombre') }}</span>
+        <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
+        {% if session.get('user_rol') == 'admin' %}
+        <a href="/usuarios" class="btn-alerta" style="text-decoration:none">👥 Usuarios</a>
+        {% endif %}
+        <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        <a href="/" class="btn-logout">← Inventario</a>
+        <a href="/logout" class="btn-logout">Salir →</a>
+    </div>
+</nav>
+
+<div id="toasts"></div>
+
+<div class="container">
+
+    <a href="/" class="back-link">← Volver al inventario</a>
+    <div class="page-title">📋 Historial de <span>Movimientos</span></div>
+
+    <!-- STATS -->
+    <div class="kpis" style="margin-bottom:20px">
+        <div class="kpi kpi-blue">
+            <small>📋 TOTAL REGISTROS</small>
+            <strong>{{ stats.total }}</strong>
+        </div>
+        <div class="kpi kpi-green">
+            <small>💰 VENTAS</small>
+            <strong style="color:var(--success)">{{ stats.vendidos }}</strong>
+        </div>
+        <div class="kpi kpi-blue">
+            <small>📦 AGREGADOS</small>
+            <strong style="color:var(--primary)">{{ stats.agregados }}</strong>
+        </div>
+        <div class="kpi kpi-red">
+            <small>↩️ ANULADOS</small>
+            <strong style="color:var(--danger)">{{ stats.anulados }}</strong>
+        </div>
+    </div>
+
+    <!-- FILTROS -->
+    <form method="GET" action="/historial">
+        <div class="filtros">
+            <div class="filtro-grupo">
+                Buscar producto
+                <input type="text" name="producto" placeholder="🔍 Nombre..." value="{{ producto }}">
+            </div>
+            <div class="filtro-grupo">
+                Acción
+                <select name="accion">
+                    <option value="">Todas</option>
+                    <option value="VENDIDO"  {{ 'selected' if accion=='VENDIDO' }}>💰 Vendido</option>
+                    <option value="AGREGADO" {{ 'selected' if accion=='AGREGADO' }}>📦 Agregado</option>
+                    <option value="EDITADO"  {{ 'selected' if accion=='EDITADO' }}>✏️ Editado</option>
+                    <option value="ANULADO"  {{ 'selected' if accion=='ANULADO' }}>↩️ Anulado</option>
+                </select>
+            </div>
+            <div class="filtro-grupo">
+                Período
+                <select name="dias">
+                    <option value="7"   {{ 'selected' if dias==7 }}>Últimos 7 días</option>
+                    <option value="30"  {{ 'selected' if dias==30 }}>Últimos 30 días</option>
+                    <option value="90"  {{ 'selected' if dias==90 }}>Últimos 90 días</option>
+                    <option value="365" {{ 'selected' if dias==365 }}>Último año</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">🔍 Filtrar</button>
+            <a href="/historial" class="btn btn-outline">✕ Limpiar</a>
+        </div>
+    </form>
+
+    <!-- TABLA -->
+    <div class="card card-table">
+        {% if registros %}
+        <div class="total-info" style="padding:10px 16px">
+            Mostrando <strong class="hi">{{ registros|length }}</strong> de <strong class="hi">{{ total }}</strong> registros
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:140px">Fecha</th>
+                    <th>Producto</th>
+                    <th>Acción</th>
+                    <th>Stock anterior</th>
+                    <th>Stock nuevo</th>
+                    <th>Diferencia</th>
+                    <th>Usuario</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for h in registros %}
+            {% set diff = h.stock_nuevo - h.stock_anterior %}
+            <tr>
+                <td style="font-size:.8em; color:var(--muted); white-space:nowrap">
+                    {{ h.fecha.strftime('%d/%m/%Y %H:%M') }}
+                </td>
+                <td class="td-left">
+                    <div style="display:flex; align-items:center; gap:8px">
+                        <span class="dot dot-{{ h.accion }}"></span>
+                        <b>{{ h.repuesto.nombre if h.repuesto else '—' }}</b>
+                    </div>
+                </td>
+                <td>
+                    <span class="accion-badge accion-{{ h.accion }}">
+                        {% if h.accion == 'VENDIDO' %}💰
+                        {% elif h.accion == 'AGREGADO' %}📦
+                        {% elif h.accion == 'EDITADO' %}✏️
+                        {% elif h.accion == 'ANULADO' %}↩️
+                        {% endif %}
+                        {{ h.accion }}
+                    </span>
+                </td>
+                <td>{{ h.stock_anterior }} uds</td>
+                <td>{{ h.stock_nuevo }} uds</td>
+                <td>
+                    {% if diff > 0 %}
+                        <span class="diff-pos">+{{ diff }}</span>
+                    {% elif diff < 0 %}
+                        <span class="diff-neg">{{ diff }}</span>
+                    {% else %}
+                        <span class="diff-neu">—</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:.82em; color:var(--muted)">
+                    {% if h.usuario_id %}
+                        {% set u = h.usuario %}
+                        👤 {{ u.nombre or u.username if u else '—' }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- PAGINACIÓN -->
+        {% if total_pags > 1 %}
+        <div class="paginacion" style="padding:16px">
+            <a href="?page={{ page-1 }}&accion={{ accion }}&producto={{ producto }}&dias={{ dias }}"
+               class="pag-btn {{ 'disabled' if page <= 1 }}">← Anterior</a>
+
+            {% for p in range(1, total_pags+1) %}
+                {% if p == page %}
+                    <span class="pag-btn active">{{ p }}</span>
+                {% elif p <= 3 or p >= total_pags-2 or (p >= page-2 and p <= page+2) %}
+                    <a href="?page={{ p }}&accion={{ accion }}&producto={{ producto }}&dias={{ dias }}"
+                       class="pag-btn">{{ p }}</a>
+                {% elif p == 4 or p == total_pags-3 %}
+                    <span style="color:var(--muted);padding:0 4px">...</span>
+                {% endif %}
+            {% endfor %}
+
+            <a href="?page={{ page+1 }}&accion={{ accion }}&producto={{ producto }}&dias={{ dias }}"
+               class="pag-btn {{ 'disabled' if page >= total_pags }}">Siguiente →</a>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <div>📋</div>
+            <p>No hay registros con los filtros seleccionados.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

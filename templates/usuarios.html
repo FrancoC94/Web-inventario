@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuarios · DriveFlow PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+        .page-title{font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;letter-spacing:2px}
+        .page-title span{color:var(--primary)}
+        .users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:32px}
+        .user-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;position:relative;transition:transform .2s,box-shadow .2s}
+        .user-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.3)}
+        .user-card.inactivo{opacity:.55}
+        .user-card__top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+        .avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2em;flex-shrink:0}
+        .avatar.admin{background:rgba(56,189,248,.2);color:var(--primary);border:2px solid rgba(56,189,248,.4)}
+        .avatar.cajero{background:rgba(245,158,11,.2);color:var(--warning);border:2px solid rgba(245,158,11,.4)}
+        .avatar.vendedor{background:rgba(16,185,129,.2);color:var(--success);border:2px solid rgba(16,185,129,.4)}
+        .user-name{font-weight:700;font-size:1em;margin-bottom:2px}
+        .user-username{font-size:.78em;color:var(--muted)}
+        .rol-pill{position:absolute;top:16px;right:16px;font-size:.68em;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.5px}
+        .rol-pill.admin{background:rgba(56,189,248,.15);color:var(--primary);border:1px solid rgba(56,189,248,.3)}
+        .rol-pill.cajero{background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3)}
+        .rol-pill.vendedor{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
+        .user-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+        .ustat{background:var(--panel2);border-radius:10px;padding:10px;text-align:center}
+        .ustat small{display:block;font-size:.65em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+        .ustat strong{font-size:1em;font-weight:700}
+        .user-actions{display:flex;gap:8px;flex-wrap:wrap}
+        .badge-inactivo{position:absolute;top:16px;left:16px;background:var(--danger);color:#fff;font-size:.65em;font-weight:700;padding:2px 8px;border-radius:20px}
+
+        .form-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:24px}
+        .form-card h3{font-family:'Rajdhani',sans-serif;font-size:1.2em;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+        .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
+        .flabel{display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted)}
+        select{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:.9em;width:100%;transition:border-color .2s}
+        select:focus{border-color:var(--primary)}
+
+        .modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.8);align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+        .modal.open{display:flex}
+        .modal-box{background:var(--panel);padding:28px;border-radius:18px;width:min(440px,92vw);border:1px solid var(--border);box-shadow:0 25px 60px rgba(0,0,0,.6);animation:boxIn .25s ease}
+        @keyframes boxIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+        .modal-box h3{margin-bottom:20px;font-family:'Rajdhani',sans-serif;font-size:1.2em}
+        .modal-btns{display:flex;gap:10px;margin-top:20px}
+        .modal-btns .btn{flex:1}
+        .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:.85em;margin-bottom:20px;transition:color .2s}
+        .back-link:hover{color:var(--primary)}
+    </style>
+</head>
+<body>
+
+<nav class="topbar">
+    <div class="topbar-left">
+        <span class="logo-sm">DRIVE<span>FLOW</span></span>
+    </div>
+    <div class="topbar-right">
+        <span class="user-info">👤 {{ session.get('user_nombre') }}</span>
+        <span class="rol-badge rol-admin">ADMIN</span>
+        <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        <a href="/" class="btn-logout">← Inventario</a>
+        <a href="/logout" class="btn-logout">Salir →</a>
+    </div>
+</nav>
+
+<div id="toasts"></div>
+
+<div class="container">
+
+    <a href="/" class="back-link">← Volver al inventario</a>
+
+    <div class="page-header">
+        <div class="page-title">👥 Gestión de <span>Usuarios</span></div>
+        <button onclick="document.getElementById('modalCrear').classList.add('open')" class="btn btn-primary">
+            ➕ Nuevo usuario
+        </button>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for cat, msg in messages %}
+            <div class="flash flash-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- RESUMEN ROL -->
+    <div class="kpis" style="margin-bottom:24px">
+        <div class="kpi kpi-blue">
+            <small>👥 TOTAL USUARIOS</small>
+            <strong>{{ usuarios|length }}</strong>
+        </div>
+        <div class="kpi kpi-green">
+            <small>✅ ACTIVOS</small>
+            <strong>{{ usuarios|selectattr('activo')|list|length }}</strong>
+        </div>
+        <div class="kpi kpi-yellow">
+            <small>🔑 ADMINS</small>
+            <strong>{{ usuarios|selectattr('rol','eq','admin')|list|length }}</strong>
+        </div>
+        <div class="kpi kpi-red">
+            <small>🚫 INACTIVOS</small>
+            <strong>{{ usuarios|rejectattr('activo')|list|length }}</strong>
+        </div>
+    </div>
+
+    <!-- TARJETAS USUARIOS -->
+    <div class="users-grid">
+        {% for u in usuarios %}
+        <div class="user-card {{ 'inactivo' if not u.activo }}">
+            {% if not u.activo %}
+            <span class="badge-inactivo">INACTIVO</span>
+            {% endif %}
+            <span class="rol-pill {{ u.rol }}">{{ u.rol.upper() }}</span>
+
+            <div class="user-card__top">
+                <div class="avatar {{ u.rol }}">{{ u.nombre[0].upper() if u.nombre else u.username[0].upper() }}</div>
+                <div>
+                    <div class="user-name">{{ u.nombre or u.username }}</div>
+                    <div class="user-username">@{{ u.username }}</div>
+                </div>
+            </div>
+
+            <div class="user-stats">
+                <div class="ustat">
+                    <small>Ventas hoy</small>
+                    <strong style="color:var(--success)">${{ "{:,.0f}".format(stats[u.id]['hoy']) }}</strong>
+                </div>
+                <div class="ustat">
+                    <small>Total</small>
+                    <strong style="color:var(--primary)">${{ "{:,.0f}".format(stats[u.id]['global']) }}</strong>
+                </div>
+                <div class="ustat">
+                    <small>Transacc.</small>
+                    <strong>{{ stats[u.id]['cant'] }}</strong>
+                </div>
+            </div>
+
+            <div class="user-actions">
+                <button class="btn btn-outline btn-sm" onclick="abrirEditar(
+                    '{{ u.id }}','{{ u.username }}','{{ u.nombre }}','{{ u.rol }}','{{ 1 if u.activo else 0 }}'
+                )">✏️ Editar</button>
+
+                {% if u.id != session['user_id'] %}
+                <a href="/usuarios/toggle/{{ u.id }}" class="btn btn-outline btn-sm"
+                   style="{{ 'color:var(--success)' if not u.activo else 'color:var(--warning)' }}">
+                    {{ '✅ Activar' if not u.activo else '⏸ Pausar' }}
+                </a>
+                {% if u.username != 'admin' %}
+                <a href="/usuarios/eliminar/{{ u.id }}" class="btn btn-outline btn-sm btn-red"
+                   onclick="return confirm('¿Eliminar @{{ u.username }}?')">🗑️</a>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <div style="margin-top:10px;font-size:.72em;color:var(--muted)">
+                Creado: {{ u.creado_en.strftime('%d/%m/%Y') }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<!-- MODAL CREAR -->
+<div class="modal" id="modalCrear">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3>➕ Crear nuevo usuario</h3>
+        <form method="POST" action="/usuarios/crear">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr">
+                <label class="flabel">Nombre completo
+                    <input type="text" name="nombre" placeholder="Juan Pérez" required>
+                </label>
+                <label class="flabel">Username
+                    <input type="text" name="username" placeholder="juan.perez" required>
+                </label>
+                <label class="flabel">Contraseña
+                    <input type="password" name="password" placeholder="Mín. 4 caracteres" required>
+                </label>
+                <label class="flabel">Rol
+                    <select name="rol">
+                        <option value="vendedor">🟢 Vendedor</option>
+                        <option value="cajero">🟡 Cajero</option>
+                        <option value="admin">🔵 Admin</option>
+                    </select>
+                </label>
+            </div>
+            <div style="margin-top:14px;padding:12px;background:var(--panel2);border-radius:10px;font-size:.78em;color:var(--muted)">
+                <b style="color:var(--text)">Permisos por rol:</b><br>
+                🔵 <b>Admin</b>: acceso total, gestión de usuarios, anular ventas<br>
+                🟡 <b>Cajero</b>: vender, ver inventario, no puede eliminar productos<br>
+                🟢 <b>Vendedor</b>: solo vender y ver su propio historial
+            </div>
+            <div class="modal-btns">
+                <button type="submit" class="btn btn-primary">✅ Crear usuario</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('modalCrear').classList.remove('open')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal" id="modalEditar">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3>✏️ Editar usuario</h3>
+        <form id="formEditar" method="POST">
+            <div class="form-grid" style="grid-template-columns:1fr 1fr">
+                <label class="flabel">Nombre completo
+                    <input type="text" name="nombre" id="eNombre" required>
+                </label>
+                <label class="flabel">Rol
+                    <select name="rol" id="eRol">
+                        <option value="vendedor">🟢 Vendedor</option>
+                        <option value="cajero">🟡 Cajero</option>
+                        <option value="admin">🔵 Admin</option>
+                    </select>
+                </label>
+                <label class="flabel">Nueva contraseña (opcional)
+                    <input type="password" name="password" placeholder="Dejar vacío para no cambiar">
+                </label>
+                <label class="flabel">Estado
+                    <select name="activo" id="eActivo">
+                        <option value="1">✅ Activo</option>
+                        <option value="0">🚫 Inactivo</option>
+                    </select>
+                </label>
+            </div>
+            <div class="modal-btns">
+                <button type="submit" class="btn btn-primary">💾 Guardar</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('modalEditar').classList.remove('open')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+function abrirEditar(id, username, nombre, rol, activo) {
+    document.getElementById('formEditar').action = `/usuarios/editar/${id}`;
+    document.getElementById('eNombre').value = nombre;
+    document.getElementById('eRol').value    = rol;
+    document.getElementById('eActivo').value = activo;
+    document.getElementById('modalEditar').classList.add('open');
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        document.getElementById('modalCrear').classList.remove('open');
+        document.getElementById('modalEditar').classList.remove('open');
+    }
+});
+</script>
+</body>
+</html>
