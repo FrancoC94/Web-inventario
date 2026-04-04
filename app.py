@@ -12,13 +12,13 @@ def create_app():
 
     db.init_app(app)
 
-    from routes.auth       import auth_bp
+    from routes.auth import auth_bp
     from routes.inventario import inventario_bp
-    from routes.ventas     import ventas_bp
-    from routes.asistente  import asistente_bp
-    from routes.usuarios   import usuarios_bp
-    from routes.historial  import historial_bp
-    from routes.pos        import pos_bp
+    from routes.ventas import ventas_bp
+    from routes.asistente import asistente_bp
+    from routes.usuarios import usuarios_bp
+    from routes.historial import historial_bp
+    from routes.pos import pos_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(inventario_bp)
@@ -30,25 +30,40 @@ def create_app():
 
     @app.route('/sw.js')
     def sw():
-        return send_from_directory(app.static_folder, 'sw.js', mimetype='application/javascript')
+        return send_from_directory(
+            app.static_folder,
+            'sw.js',
+            mimetype='application/javascript'
+        )
 
     @app.route('/manifest.json')
     def manifest():
-        return send_from_directory(app.static_folder, 'manifest.json', mimetype='application/manifest+json')
+        return send_from_directory(
+            app.static_folder,
+            'manifest.json',
+            mimetype='application/manifest+json'
+        )
 
     @app.before_request
     def require_login():
         endpoint = request.endpoint or ''
-        libres = {'auth.login', 'auth.logout', 'sw', 'manifest', 'static'}
+        libres = {'auth.login', 'auth.logout', 'sw', 'manifest'}
+
         if endpoint not in libres and not endpoint.startswith('static'):
             if 'user_id' not in session:
                 return redirect(url_for('auth.login'))
 
     with app.app_context():
         db.create_all()
+
         from models import Usuario
+
         if not Usuario.query.filter_by(username='admin').first():
-            u = Usuario(username='admin', nombre='Administrador', rol='admin')
+            u = Usuario(
+                username='admin',
+                nombre='Administrador',
+                rol='admin'
+            )
             u.set_password('admin123')
             db.session.add(u)
             db.session.commit()
@@ -56,5 +71,17 @@ def create_app():
 
     return app
 
+
+# =====================================================
+# 🔥 ESTA LÍNEA ES LA QUE TE FALTABA
+# =====================================================
+app = create_app()
+
+
 if __name__ == '__main__':
-    create_app().run(host='127.0.0.1', port=5050, debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 5050))
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=True
+    )
