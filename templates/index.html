@@ -28,6 +28,7 @@
     <div class="topbar-right">
         <a href="/perfil" class="user-info" style="text-decoration:none;cursor:pointer">👤 {{ session.get('user_nombre','Usuario') }}</a>
         <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
+        <a href="/pos" class="btn-alerta" style="text-decoration:none">🛒 POS</a>
         <a href="/historial" class="btn-alerta" style="text-decoration:none">📋 Historial</a>
         {% if session.get('user_rol') == 'admin' %}
         <a href="/usuarios" class="btn-alerta" style="text-decoration:none">👥 Usuarios</a>
@@ -74,10 +75,12 @@
 
     <!-- KPIs -->
     <div class="kpis">
+        {% if puede_costos %}
         <div class="kpi kpi-blue">
             <small>💰 CAPITAL + GANANCIA</small>
-            <strong>${{ "{:,.2f}".format(inversion + ganancia) }}</strong>
+            <strong>${{ "{:,.2f}".format((inversion or 0) + ganancia) }}</strong>
         </div>
+        {% endif %}
         <div class="kpi kpi-green">
             <small>🚀 VENTAS DE HOY</small>
             <strong style="color:var(--success)">${{ "{:,.2f}".format(total_hoy) }}</strong>
@@ -86,11 +89,13 @@
             <small>🏆 PRODUCTO ESTRELLA</small>
             <strong style="font-size:1.1em">{{ estrella }}</strong>
         </div>
+        {% if puede_costos %}
         <div class="kpi kpi-red">
             <small>🛒 PEDIDO SUGERIDO</small>
-            <strong style="color:var(--danger)">${{ "{:,.2f}".format(inversion_sugerida) }}</strong>
+            <strong style="color:var(--danger)">${{ "{:,.2f}".format(inversion_sugerida or 0) }}</strong>
             <button onclick="copiarPedido()" class="btn btn-sm btn-primary" style="margin-top:8px">📋 Copiar pedido</button>
         </div>
+        {% endif %}
     </div>
 
     <!-- BUSCADOR + EXCEL -->
@@ -106,7 +111,8 @@
         </form>
     </div>
 
-    <!-- FORM AGREGAR -->
+    <!-- FORM AGREGAR — solo admin/supervisor -->
+    {% if puede_costos %}
     <form action="/agregar" method="POST" class="card form-add">
         <input type="text"   name="nombre"  placeholder="Nombre del repuesto" required>
         <input type="number" name="p_costo" placeholder="Costo $"   step="0.01" min="0.01" required>
@@ -114,18 +120,27 @@
         <input type="number" name="stock"   placeholder="Cantidad"  min="0"     required>
         <button type="submit" class="btn btn-primary">➕ Registrar</button>
     </form>
+    {% endif %}
 
     <!-- TABLA INVENTARIO -->
     <div class="card card-table">
         <table>
             <thead>
-                <tr><th>Producto</th><th>Costo</th><th>Venta</th><th>Stock</th><th>Acciones</th></tr>
+                <tr>
+                    <th>Producto</th>
+                    {% if puede_costos %}<th>Costo</th>{% endif %}
+                    <th>Venta</th>
+                    <th>Stock</th>
+                    <th>Acciones</th>
+                </tr>
             </thead>
             <tbody id="tbodyInventario">
             {% for p in inventario %}
             <tr class="fila" data-id="{{ p.id }}">
                 <td class="td-left"><b>{{ p.nombre }}</b></td>
+                {% if puede_costos %}
                 <td>${{ "{:,.2f}".format(p.p_costo) }}</td>
+                {% endif %}
                 <td style="color:var(--primary);font-weight:700">${{ "{:,.2f}".format(p.p_venta) }}</td>
                 <td>
                     <span class="stock-badge stock-{{ p.estado_stock }}">
@@ -142,8 +157,10 @@
                             <input type="number" name="cantidad_venta" value="1" min="1" max="{{ p.stock }}" class="qty">
                             <button type="submit" class="btn btn-success btn-sm">Vender</button>
                         </form>
+                        {% if puede_costos %}
                         <button class="btn btn-outline btn-sm" onclick="abrirEditar('{{ p.id }}','{{ p.nombre }}','{{ p.p_costo }}','{{ p.p_venta }}','{{ p.stock }}')">✏️</button>
                         <a href="/eliminar_producto/{{ p.id }}" class="btn btn-outline btn-sm btn-red" onclick="return onEliminar(event,this,'{{ p.nombre }}')">🗑️</a>
+                        {% endif %}
                     </div>
                 </td>
             </tr>

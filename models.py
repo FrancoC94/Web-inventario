@@ -8,7 +8,7 @@ class Usuario(db.Model):
     username      = db.Column(db.String(50), nullable=False, unique=True)
     password_hash = db.Column(db.String(256), nullable=False)
     nombre        = db.Column(db.String(100), default='')
-    rol           = db.Column(db.String(20), default='vendedor')  # admin | cajero | vendedor
+    rol           = db.Column(db.String(20), default='vendedor')  # admin | supervisor | cajero | vendedor
     activo        = db.Column(db.Boolean, default=True)
     creado_en     = db.Column(db.DateTime, default=datetime.utcnow)
     ventas        = db.relationship('Venta', backref='usuario', lazy=True, foreign_keys='Venta.usuario_id')

@@ -17,6 +17,7 @@
         .user-card__top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
         .avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.2em;flex-shrink:0}
         .avatar.admin{background:rgba(56,189,248,.2);color:var(--primary);border:2px solid rgba(56,189,248,.4)}
+        .avatar.supervisor{background:rgba(139,92,246,.2);color:#a78bfa;border:2px solid rgba(139,92,246,.4)}
         .avatar.cajero{background:rgba(245,158,11,.2);color:var(--warning);border:2px solid rgba(245,158,11,.4)}
         .avatar.vendedor{background:rgba(16,185,129,.2);color:var(--success);border:2px solid rgba(16,185,129,.4)}
         .user-name{font-weight:700;font-size:1em;margin-bottom:2px}
@@ -185,6 +186,7 @@
                     <select name="rol">
                         <option value="vendedor">🟢 Vendedor</option>
                         <option value="cajero">🟡 Cajero</option>
+                        <option value="supervisor">🟣 Supervisor</option>
                         <option value="admin">🔵 Admin</option>
                     </select>
                 </label>
@@ -192,7 +194,8 @@
             <div style="margin-top:14px;padding:12px;background:var(--panel2);border-radius:10px;font-size:.78em;color:var(--muted)">
                 <b style="color:var(--text)">Permisos por rol:</b><br>
                 🔵 <b>Admin</b>: acceso total, gestión de usuarios, anular ventas<br>
-                🟡 <b>Cajero</b>: vender, ver inventario, no puede eliminar productos<br>
+                🟣 <b>Supervisor</b>: ver costos, editar y eliminar productos<br>
+                🟡 <b>Cajero</b>: vender, ver inventario sin costos<br>
                 🟢 <b>Vendedor</b>: solo vender y ver su propio historial
             </div>
             <div class="modal-btns">
@@ -216,6 +219,7 @@
                     <select name="rol" id="eRol">
                         <option value="vendedor">🟢 Vendedor</option>
                         <option value="cajero">🟡 Cajero</option>
+                        <option value="supervisor">🟣 Supervisor</option>
                         <option value="admin">🔵 Admin</option>
                     </select>
                 </label>
