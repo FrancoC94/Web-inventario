@@ -13,7 +13,7 @@ def index():
 @pos_bp.route('/pos/buscar')
 def buscar():
     q = request.args.get('q', '').upper().strip()
-    if len(q) < 1:
+    if not q:
         return jsonify([])
     productos = Repuesto.query.filter(
         func.upper(Repuesto.nombre).contains(q)
@@ -28,17 +28,18 @@ def buscar():
 
 @pos_bp.route('/pos/vender', methods=['POST'])
 def vender():
-    data  = request.get_json(silent=True) or {}
-    items = data.get('items', [])  # [{id, cantidad}, ...]
-    uid   = session.get('user_id')
+    data           = request.get_json(silent=True) or {}
+    items          = data.get('items', [])
+    cliente_nombre = data.get('cliente', '').strip() or None
+    uid            = session.get('user_id')
 
     if not items:
         return jsonify({'ok': False, 'msg': 'Carrito vacío.'})
 
-    total     = 0
-    ganancia  = 0
-    detalle   = []
-    errores   = []
+    total    = 0
+    ganancia = 0
+    detalle  = []
+    errores  = []
 
     try:
         for item in items:
@@ -60,7 +61,8 @@ def vender():
 
             db.session.add(Venta(
                 repuesto_id=p.id, usuario_id=uid,
-                cantidad=cant, total_venta=p.p_venta*cant,
+                cliente_nombre=cliente_nombre,
+                cantidad=cant, total_venta=p.p_venta * cant,
                 ganancia_operacion=g
             ))
             db.session.add(HistorialStock(
@@ -86,22 +88,21 @@ def vender():
             'detalle':  detalle,
             'errores':  errores,
             'hora':     datetime.utcnow().strftime('%H:%M:%S'),
-            'cajero':   session.get('user_nombre', '—')
+            'cajero':   session.get('user_nombre', '—'),
+            'cliente':  cliente_nombre or 'Cliente general'
         })
-
     except Exception as e:
         db.session.rollback()
         return jsonify({'ok': False, 'msg': str(e)})
 
 @pos_bp.route('/pos/ventas_hoy')
 def ventas_hoy():
-    uid = session.get('user_id')
-    hoy = datetime.utcnow().date()
+    uid  = session.get('user_id')
+    hoy  = datetime.utcnow().date()
     ventas = Venta.query.filter(
         Venta.usuario_id == uid,
         func.date(Venta.fecha) == hoy
     ).order_by(Venta.fecha.desc()).limit(20).all()
-
     total_hoy = sum(v.total_venta for v in ventas)
     return jsonify({
         'total':  total_hoy,
@@ -109,6 +110,7 @@ def ventas_hoy():
         'ventas': [{
             'hora':     v.fecha.strftime('%H:%M'),
             'producto': v.repuesto.nombre if v.repuesto else '—',
+            'cliente':  v.cliente_nombre or '—',
             'cantidad': v.cantidad,
             'total':    v.total_venta
         } for v in ventas]

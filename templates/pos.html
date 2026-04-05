@@ -185,6 +185,17 @@
             <div class="search-results" id="searchResults"></div>
         </div>
 
+        <!-- Cliente opcional -->
+        <div style="position:relative">
+            <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.45;pointer-events:none">👤</span>
+            <input type="text" id="clienteInput"
+                   style="width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:11px 16px 11px 44px;border-radius:12px;font-family:inherit;font-size:.92em;outline:none;transition:border-color .2s,box-shadow .2s"
+                   placeholder="Nombre del cliente (opcional)"
+                   autocomplete="off"
+                   onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(56,189,248,.12)'"
+                   onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        </div>
+
         <!-- Carrito header -->
         <div class="carrito-header">
             <span class="carrito-title">🛒 CARRITO <span id="itemCount" style="color:var(--primary);font-size:.85em">(0)</span></span>
@@ -260,6 +271,7 @@
             <div class="ticket-logo">DRIVE<span>FLOW</span></div>
             <div class="ticket-sub">Comprobante de venta</div>
             <div style="font-size:.75em;color:#888;margin-top:4px" id="ticketFecha"></div>
+            <div style="font-size:.82em;color:#444;margin-top:6px;font-weight:600" id="ticketCliente"></div>
         </div>
         <div id="ticketItems"></div>
         <div class="ticket-total">
@@ -484,33 +496,36 @@ function calcVuelto() {
 // ── Procesar venta ──────────────────────────────
 async function procesarVenta() {
     if (!carrito.length) return;
-    const total = carrito.reduce((s,i) => s+i.precio*i.cantidad, 0);
-    const pago  = parseFloat(document.getElementById('pagoInput').value) || 0;
+    const total    = carrito.reduce((s,i) => s+i.precio*i.cantidad, 0);
+    const pago     = parseFloat(document.getElementById('pagoInput').value) || 0;
+    const cliente  = document.getElementById('clienteInput').value.trim();
     if (pago < total) { toast('⚠️ Monto insuficiente', 'danger'); return; }
 
     const btn = document.getElementById('btnCobrar');
-    btn.disabled  = true;
+    btn.disabled    = true;
     btn.textContent = '⏳ Procesando...';
 
     try {
         const res  = await fetch('/pos/vender', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: carrito.map(i => ({ id: i.id, cantidad: i.cantidad })) })
+            body: JSON.stringify({
+                items:   carrito.map(i => ({ id: i.id, cantidad: i.cantidad })),
+                cliente: cliente
+            })
         });
         const data = await res.json();
-
         if (data.ok) {
             mostrarTicket(data, pago);
             cargarStatsHoy();
         } else {
             toast(`❌ ${data.msg}`, 'danger');
-            btn.disabled   = false;
+            btn.disabled    = false;
             btn.textContent = '✅ COBRAR';
         }
     } catch {
         toast('❌ Error de conexión', 'danger');
-        btn.disabled   = false;
+        btn.disabled    = false;
         btn.textContent = '✅ COBRAR';
     }
 }
@@ -518,7 +533,9 @@ async function procesarVenta() {
 // ── Ticket ──────────────────────────────────────
 function mostrarTicket(data, pago) {
     const vuelto = pago - data.total;
-    document.getElementById('ticketFecha').textContent = new Date().toLocaleString('es');
+    document.getElementById('ticketFecha').textContent   = new Date().toLocaleString('es');
+    document.getElementById('ticketCliente').textContent = data.cliente !== 'Cliente general'
+        ? `👤 Cliente: ${data.cliente}` : '';
     document.getElementById('ticketItems').innerHTML = data.detalle.map(d =>
         `<div class="ticket-item">
             <span>${d.cantidad}× ${d.nombre}</span>
@@ -531,14 +548,14 @@ function mostrarTicket(data, pago) {
     document.getElementById('ticketCajero').textContent = data.cajero;
     document.getElementById('modalTicket').classList.add('show');
 
-    if (data.errores && data.errores.length) {
+    if (data.errores && data.errores.length)
         data.errores.forEach(e => toast(`⚠️ ${e}`, 'danger'));
-    }
 }
 
 function nuevaVenta() {
     limpiarCarrito();
-    document.getElementById('pagoInput').value = '';
+    document.getElementById('pagoInput').value  = '';
+    document.getElementById('clienteInput').value = '';
     calcVuelto();
     cerrarTicket();
     document.getElementById('btnCobrar').textContent = '✅ COBRAR';
