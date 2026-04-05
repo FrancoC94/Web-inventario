@@ -8,7 +8,7 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
 
-    # ── BD ─────────────────────────────────────────
+    # ── Base de datos ──────────────────────────────
     default_db = 'sqlite:////data/driveflow.db' if os.path.isdir('/data') else 'sqlite:///driveflow.db'
     db_url = os.environ.get('DATABASE_URL', default_db)
     if db_url.startswith('mysql://'):
@@ -16,12 +16,13 @@ def create_app():
 
     app.config['SQLALCHEMY_DATABASE_URI']        = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_ENGINE_OPTIONS']      = {'pool_recycle':280, 'pool_pre_ping':True}
-    app.config['MAX_CONTENT_LENGTH']             = 5 * 1024 * 1024  # 5MB max foto
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']      = {'pool_recycle': 280, 'pool_pre_ping': True}
+    app.config['MAX_CONTENT_LENGTH']             = 5 * 1024 * 1024
     app.secret_key = os.environ.get('SECRET_KEY', 'driveflow-secret-2026')
 
     db.init_app(app)
 
+    # ── Blueprints ─────────────────────────────────
     from routes.auth       import auth_bp
     from routes.inventario import inventario_bp
     from routes.ventas     import ventas_bp
@@ -40,40 +41,41 @@ def create_app():
     app.register_blueprint(pos_bp, url_prefix='/pos')
     app.register_blueprint(reportes_bp)
 
+    # ── PWA ────────────────────────────────────────
     @app.route('/sw.js')
     def sw():
         return send_from_directory(app.static_folder, 'sw.js', mimetype='application/javascript')
+
     @app.route('/manifest.json')
     def manifest():
         return send_from_directory(app.static_folder, 'manifest.json', mimetype='application/manifest+json')
 
+    # ── Protección de rutas ────────────────────────
     @app.before_request
     def require_login():
         endpoint = request.endpoint or ''
-        libres = {'auth.login','auth.logout','sw','manifest','static'}
+        libres = {'auth.login', 'auth.logout', 'sw', 'manifest', 'static'}
         if endpoint not in libres and not endpoint.startswith('static'):
             if 'user_id' not in session:
                 return redirect(url_for('auth.login'))
 
+    # ── Crear tablas + admin ───────────────────────
     with app.app_context():
         db.create_all()
         from models import Usuario
         if not Usuario.query.filter_by(username='admin').first():
             u = Usuario(username='admin', nombre='Administrador', rol='admin')
             u.set_password('admin123')
-            db.session.add(u); db.session.commit()
+            db.session.add(u)
+            db.session.commit()
             print('✅ Admin creado: admin / admin123')
 
     return app
 
-if __name__ == '__main__':
-    create_app().run(host='127.0.0.1', port=5050, debug=True, use_reloader=False)
-    app = create_app()
 
-    if __name__ == '__main__':
-        port = int(os.environ.get("PORT", 5050))
-        app.run(
-            host='0.0.0.0',
-            port=port,
-            debug=True
-        )
+# ── Para Render y local ────────────────────────────
+app = create_app()
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5050))
+    app.run(host='0.0.0.0', port=port, debug=False)
