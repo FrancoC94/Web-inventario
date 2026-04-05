@@ -8,7 +8,7 @@ class Usuario(db.Model):
     username      = db.Column(db.String(50), nullable=False, unique=True)
     password_hash = db.Column(db.String(256), nullable=False)
     nombre        = db.Column(db.String(100), default='')
-    rol           = db.Column(db.String(20), default='vendedor')  # admin | supervisor | cajero | vendedor
+    rol           = db.Column(db.String(20), default='vendedor')  # admin|supervisor|cajero|vendedor
     activo        = db.Column(db.Boolean, default=True)
     creado_en     = db.Column(db.DateTime, default=datetime.utcnow)
     ventas        = db.relationship('Venta', backref='usuario', lazy=True, foreign_keys='Venta.usuario_id')
@@ -17,15 +17,6 @@ class Usuario(db.Model):
         self.password_hash = generate_password_hash(pw)
     def check_password(self, pw):
         return check_password_hash(self.password_hash, pw)
-
-    @property
-    def ventas_hoy(self):
-        hoy = datetime.utcnow().date()
-        from sqlalchemy import func
-        return Venta.query.filter(
-            Venta.usuario_id == self.id,
-            func.date(Venta.fecha) == hoy
-        ).count()
 
     @property
     def total_ventas(self):
@@ -43,6 +34,7 @@ class Repuesto(db.Model):
     stock        = db.Column(db.Integer, nullable=False, default=0)
     vendido      = db.Column(db.Integer, default=0)
     stock_minimo = db.Column(db.Integer, default=5)
+    foto_url     = db.Column(db.String(255), nullable=True)   # ← foto del producto
     ventas    = db.relationship('Venta', backref='repuesto', cascade='all, delete-orphan', lazy=True)
     historial = db.relationship('HistorialStock', backref='repuesto', cascade='all, delete-orphan', lazy=True)
 
@@ -58,6 +50,8 @@ class Venta(db.Model):
     id                 = db.Column(db.Integer, primary_key=True)
     repuesto_id        = db.Column(db.Integer, db.ForeignKey('repuesto.id', ondelete='CASCADE'), nullable=False)
     usuario_id         = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    cliente_nombre     = db.Column(db.String(100), nullable=True)
+    cliente_whatsapp   = db.Column(db.String(20), nullable=True)   # ← WhatsApp opcional
     cantidad           = db.Column(db.Integer, nullable=False)
     total_venta        = db.Column(db.Float, nullable=False)
     ganancia_operacion = db.Column(db.Float, nullable=False)

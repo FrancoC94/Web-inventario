@@ -1,24 +1,25 @@
-import pandas as pd
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+import os, pandas as pd
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from sqlalchemy import func
 from datetime import datetime
+from werkzeug.utils import secure_filename
 from extensions import db
 from models import Repuesto, Venta, HistorialStock
 
 inventario_bp = Blueprint('inventario', __name__)
-
-# Roles que pueden ver costos, editar y eliminar
 ROLES_PRIVILEGIADOS = ('admin', 'supervisor')
+ALLOWED_EXT = {'png','jpg','jpeg','webp','gif'}
 
 def puede_ver_costos():
     return session.get('user_rol') in ROLES_PRIVILEGIADOS
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXT
+
 def _historial(repuesto_id, ant, nuevo, accion):
     uid = session.get('user_id')
-    db.session.add(HistorialStock(
-        repuesto_id=repuesto_id, usuario_id=uid,
-        stock_anterior=ant, stock_nuevo=nuevo, accion=accion
-    ))
+    db.session.add(HistorialStock(repuesto_id=repuesto_id, usuario_id=uid,
+                                  stock_anterior=ant, stock_nuevo=nuevo, accion=accion))
 
 def _stats():
     hoy        = datetime.utcnow().date()
@@ -29,20 +30,18 @@ def _stats():
     estrella  = db.session.get(Repuesto, top[0]).nombre if top else 'Sin datos'
     todos     = Repuesto.query.all()
     faltantes = [p for p in todos if p.stock < 10]
-    # Solo mostrar inversión a privilegiados
     inversion = sum(p.p_costo * p.stock for p in todos) if puede_ver_costos() else None
     return dict(
-        total_hoy=total_hoy, estrella=estrella,
-        inversion=inversion,
+        total_hoy=total_hoy, estrella=estrella, inversion=inversion,
         ganancia=db.session.query(func.sum(Venta.ganancia_operacion)).scalar() or 0,
-        inversion_sugerida=sum((10 - p.stock) * p.p_costo for p in faltantes) if puede_ver_costos() else None,
+        inversion_sugerida=sum((10-p.stock)*p.p_costo for p in faltantes) if puede_ver_costos() else None,
         alertas=[p for p in todos if p.stock <= p.stock_minimo],
         puede_costos=puede_ver_costos(),
     )
 
 @inventario_bp.route('/')
 def inicio():
-    busqueda   = request.args.get('buscar', '').upper().strip()
+    busqueda   = request.args.get('buscar','').upper().strip()
     inventario = (Repuesto.query.filter(func.upper(Repuesto.nombre).contains(busqueda)).all()
                   if busqueda else Repuesto.query.all())
     ventas = Venta.query.order_by(Venta.fecha.desc()).limit(15).all()
@@ -61,12 +60,24 @@ def agregar():
         if p_costo <= 0 or p_venta <= 0 or stock < 0:
             flash('Los valores deben ser positivos.', 'warning')
             return redirect(url_for('inventario.inicio'))
+
+        # Subir foto si viene
+        foto_url = None
+        file = request.files.get('foto')
+        if file and file.filename and allowed_file(file.filename):
+            fname = secure_filename(f"{nombre.replace(' ','_')}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.{file.filename.rsplit('.',1)[1].lower()}")
+            upload_folder = os.path.join(current_app.static_folder, 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            file.save(os.path.join(upload_folder, fname))
+            foto_url = f'uploads/{fname}'
+
         p = Repuesto.query.filter_by(nombre=nombre).first()
         if p:
             ant = p.stock; p.stock += stock; p.p_costo = p_costo; p.p_venta = p_venta
+            if foto_url: p.foto_url = foto_url
             _historial(p.id, ant, p.stock, 'AGREGADO')
         else:
-            p = Repuesto(nombre=nombre, p_costo=p_costo, p_venta=p_venta, stock=stock)
+            p = Repuesto(nombre=nombre, p_costo=p_costo, p_venta=p_venta, stock=stock, foto_url=foto_url)
             db.session.add(p); db.session.flush()
             _historial(p.id, 0, stock, 'AGREGADO')
         db.session.commit()
@@ -80,7 +91,7 @@ def agregar():
 @inventario_bp.route('/editar/<int:id>', methods=['POST'])
 def editar(id):
     if not puede_ver_costos():
-        flash('⛔ Sin permiso para editar productos.', 'danger')
+        flash('⛔ Sin permiso.', 'danger')
         return redirect(url_for('inventario.inicio'))
     try:
         p = db.session.get(Repuesto, id)
@@ -90,6 +101,15 @@ def editar(id):
         p.p_costo = float(request.form['p_costo'])
         p.p_venta = float(request.form['p_venta'])
         p.stock   = int(request.form['stock'])
+
+        file = request.files.get('foto')
+        if file and file.filename and allowed_file(file.filename):
+            fname = secure_filename(f"{p.nombre.replace(' ','_')}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.{file.filename.rsplit('.',1)[1].lower()}")
+            upload_folder = os.path.join(current_app.static_folder, 'uploads')
+            os.makedirs(upload_folder, exist_ok=True)
+            file.save(os.path.join(upload_folder, fname))
+            p.foto_url = f'uploads/{fname}'
+
         _historial(p.id, ant, p.stock, 'EDITADO')
         db.session.commit(); flash(f'✅ {p.nombre} actualizado.', 'success')
     except ValueError:
@@ -101,7 +121,7 @@ def editar(id):
 @inventario_bp.route('/eliminar_producto/<int:id>')
 def eliminar_producto(id):
     if not puede_ver_costos():
-        flash('⛔ Sin permiso para eliminar productos.', 'danger')
+        flash('⛔ Sin permiso.', 'danger')
         return redirect(url_for('inventario.inicio'))
     try:
         p = db.session.get(Repuesto, id)
@@ -112,10 +132,31 @@ def eliminar_producto(id):
         db.session.rollback(); flash(f'❌ {e}', 'danger')
     return redirect(url_for('inventario.inicio'))
 
+# ── Eliminar masivo ────────────────────────────────────────
+@inventario_bp.route('/eliminar_masivo', methods=['POST'])
+def eliminar_masivo():
+    if not puede_ver_costos():
+        return jsonify({'ok': False, 'msg': '⛔ Sin permiso.'})
+    try:
+        ids = request.json.get('ids', [])
+        if not ids:
+            return jsonify({'ok': False, 'msg': 'No se seleccionó ningún producto.'})
+        eliminados = 0
+        for id in ids:
+            p = db.session.get(Repuesto, id)
+            if p:
+                db.session.delete(p)
+                eliminados += 1
+        db.session.commit()
+        return jsonify({'ok': True, 'msg': f'🗑️ {eliminados} productos eliminados.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'ok': False, 'msg': str(e)})
+
 @inventario_bp.route('/subir_masivo', methods=['POST'])
 def subir_masivo():
     if not puede_ver_costos():
-        flash('⛔ Sin permiso para cargar Excel.', 'danger')
+        flash('⛔ Sin permiso.', 'danger')
         return redirect(url_for('inventario.inicio'))
     file = request.files.get('archivo_excel')
     if not file: flash('No se seleccionó archivo.', 'warning'); return redirect(url_for('inventario.inicio'))
@@ -133,9 +174,9 @@ def subir_masivo():
                              p_venta=float(row['p_venta']), stock=int(row['stock']))
                 db.session.add(p); db.session.flush()
                 _historial(p.id, 0, int(row['stock']), 'AGREGADO')
-        db.session.commit(); flash('📁 Excel cargado correctamente.', 'success')
+        db.session.commit(); flash('📁 Excel cargado.', 'success')
     except Exception as e:
-        db.session.rollback(); flash(f'❌ Error Excel: {e}', 'danger')
+        db.session.rollback(); flash(f'❌ Error: {e}', 'danger')
     return redirect(url_for('inventario.inicio'))
 
 @inventario_bp.route('/exportar_compras')

@@ -196,6 +196,17 @@
                    onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
         </div>
 
+        <!-- WhatsApp opcional -->
+        <div style="position:relative">
+            <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.45;pointer-events:none">📱</span>
+            <input type="tel" id="whatsappInput"
+                   style="width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:11px 16px 11px 44px;border-radius:12px;font-family:inherit;font-size:.92em;outline:none;transition:border-color .2s,box-shadow .2s"
+                   placeholder="WhatsApp cliente ej: +593999999999 (opcional)"
+                   autocomplete="off"
+                   onfocus="this.style.borderColor='#25d366';this.style.boxShadow='0 0 0 3px rgba(37,211,102,.12)'"
+                   onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        </div>
+
         <!-- Carrito header -->
         <div class="carrito-header">
             <span class="carrito-title">🛒 CARRITO <span id="itemCount" style="color:var(--primary);font-size:.85em">(0)</span></span>
@@ -284,6 +295,7 @@
         <div style="display:flex;justify-content:space-between;font-size:.85em;font-weight:700;color:#10b981">
             <span>Vuelto</span><span id="ticketVuelto"></span>
         </div>
+        <div style="display:flex;justify-content:space-between;font-size:.82em;color:#555;margin-top:4px" id="ticketWsp" style="display:none"></div>
         <div class="ticket-footer">
             Atendido por: <b id="ticketCajero"></b><br>
             ¡Gracias por su compra!
@@ -499,34 +511,23 @@ async function procesarVenta() {
     const total    = carrito.reduce((s,i) => s+i.precio*i.cantidad, 0);
     const pago     = parseFloat(document.getElementById('pagoInput').value) || 0;
     const cliente  = document.getElementById('clienteInput').value.trim();
+    const whatsapp = document.getElementById('whatsappInput').value.trim();
     if (pago < total) { toast('⚠️ Monto insuficiente', 'danger'); return; }
 
     const btn = document.getElementById('btnCobrar');
-    btn.disabled    = true;
-    btn.textContent = '⏳ Procesando...';
+    btn.disabled = true; btn.textContent = '⏳ Procesando...';
 
     try {
         const res  = await fetch('/pos/vender', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                items:   carrito.map(i => ({ id: i.id, cantidad: i.cantidad })),
-                cliente: cliente
-            })
+            body: JSON.stringify({ items: carrito.map(i=>({id:i.id,cantidad:i.cantidad})), cliente, whatsapp })
         });
         const data = await res.json();
-        if (data.ok) {
-            mostrarTicket(data, pago);
-            cargarStatsHoy();
-        } else {
-            toast(`❌ ${data.msg}`, 'danger');
-            btn.disabled    = false;
-            btn.textContent = '✅ COBRAR';
-        }
+        if (data.ok) { mostrarTicket(data, pago); cargarStatsHoy(); }
+        else { toast(`❌ ${data.msg}`, 'danger'); btn.disabled=false; btn.textContent='✅ COBRAR'; }
     } catch {
-        toast('❌ Error de conexión', 'danger');
-        btn.disabled    = false;
-        btn.textContent = '✅ COBRAR';
+        toast('❌ Error de conexión', 'danger'); btn.disabled=false; btn.textContent='✅ COBRAR';
     }
 }
 
@@ -534,30 +535,36 @@ async function procesarVenta() {
 function mostrarTicket(data, pago) {
     const vuelto = pago - data.total;
     document.getElementById('ticketFecha').textContent   = new Date().toLocaleString('es');
-    document.getElementById('ticketCliente').textContent = data.cliente !== 'Cliente general'
-        ? `👤 Cliente: ${data.cliente}` : '';
+    document.getElementById('ticketCliente').textContent = data.cliente !== 'Cliente general' ? `👤 Cliente: ${data.cliente}` : '';
     document.getElementById('ticketItems').innerHTML = data.detalle.map(d =>
-        `<div class="ticket-item">
-            <span>${d.cantidad}× ${d.nombre}</span>
-            <span>$${d.subtotal.toFixed(2)}</span>
-        </div>`
+        `<div class="ticket-item"><span>${d.cantidad}× ${d.nombre}</span><span>$${d.subtotal.toFixed(2)}</span></div>`
     ).join('');
     document.getElementById('ticketTotal').textContent  = `$${data.total.toFixed(2)}`;
     document.getElementById('ticketPagado').textContent = `$${pago.toFixed(2)}`;
     document.getElementById('ticketVuelto').textContent = `$${vuelto.toFixed(2)}`;
     document.getElementById('ticketCajero').textContent = data.cajero;
-    document.getElementById('modalTicket').classList.add('show');
 
-    if (data.errores && data.errores.length)
-        data.errores.forEach(e => toast(`⚠️ ${e}`, 'danger'));
+    // WhatsApp link
+    const wspEl = document.getElementById('ticketWsp');
+    if (data.whatsapp) {
+        const num = data.whatsapp.replace(/\D/g,'');
+        const msg = encodeURIComponent(`Hola ${data.cliente || ''}, su compra por $${data.total.toFixed(2)} fue procesada. ¡Gracias!`);
+        wspEl.innerHTML = `<span>📱 ${data.whatsapp}</span><a href="https://wa.me/${num}?text=${msg}" target="_blank" style="color:#25d366;font-weight:700;text-decoration:none">💬 Enviar WhatsApp</a>`;
+        wspEl.style.display = 'flex';
+    } else {
+        wspEl.style.display = 'none';
+    }
+
+    document.getElementById('modalTicket').classList.add('show');
+    if (data.errores && data.errores.length) data.errores.forEach(e => toast(`⚠️ ${e}`, 'danger'));
 }
 
 function nuevaVenta() {
     limpiarCarrito();
-    document.getElementById('pagoInput').value  = '';
-    document.getElementById('clienteInput').value = '';
-    calcVuelto();
-    cerrarTicket();
+    document.getElementById('pagoInput').value    = '';
+    document.getElementById('clienteInput').value  = '';
+    document.getElementById('whatsappInput').value = '';
+    calcVuelto(); cerrarTicket();
     document.getElementById('btnCobrar').textContent = '✅ COBRAR';
     searchInput.focus();
 }

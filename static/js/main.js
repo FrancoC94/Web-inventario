@@ -34,12 +34,15 @@ document.querySelectorAll('#tbodyInventario .fila').forEach((fila, i) => {
 });
 
 // ── Modal editar ───────────────────────────────────────────
-function abrirEditar(id, nombre, costo, venta, stock) {
+function abrirEditar(id, nombre, costo, venta, stock, foto) {
     document.getElementById('formEditar').action = `/editar/${id}`;
     document.getElementById('eNombre').value = nombre;
     document.getElementById('eCosto').value  = costo;
     document.getElementById('eVenta').value  = venta;
     document.getElementById('eStock').value  = stock;
+    const prev = document.getElementById('eFotoPreview');
+    if (foto) { prev.src = `/static/${foto}`; prev.style.display = 'block'; }
+    else { prev.style.display = 'none'; }
     document.getElementById('modalEditar').classList.add('open');
     setTimeout(() => document.getElementById('eNombre').focus(), 80);
 }
@@ -50,6 +53,53 @@ document.getElementById('modalEditar').addEventListener('click', e => {
     if (e.target === document.getElementById('modalEditar')) cerrarModal();
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { cerrarModal(); } });
+
+function previewFoto(input) {
+    if (input.files && input.files[0]) {
+        const prev = document.getElementById('eFotoPreview');
+        prev.src = URL.createObjectURL(input.files[0]);
+        prev.style.display = 'block';
+    }
+}
+
+// ── Ver foto grande ────────────────────────────────────────
+function verFoto(src, nombre) {
+    document.getElementById('fotoGrande').src   = src;
+    document.getElementById('fotoNombre').textContent = nombre;
+    document.getElementById('modalFoto').classList.add('open');
+}
+
+// ── Selección masiva ───────────────────────────────────────
+let modoSeleccion = false;
+function toggleSeleccion() {
+    modoSeleccion = !modoSeleccion;
+    const checks   = document.querySelectorAll('.td-check');
+    const thCheck  = document.getElementById('thCheck');
+    const btnMasivo = document.getElementById('btnElimMasivo');
+    const btnSelec  = document.getElementById('btnSelec');
+    checks.forEach(c => c.style.display = modoSeleccion ? 'table-cell' : 'none');
+    thCheck.style.display  = modoSeleccion ? 'table-cell' : 'none';
+    btnMasivo.style.display = modoSeleccion ? 'inline-flex' : 'none';
+    btnSelec.textContent   = modoSeleccion ? '✕ Cancelar' : '☑️ Seleccionar';
+}
+function toggleAll(cb) {
+    document.querySelectorAll('.check-item').forEach(c => c.checked = cb.checked);
+}
+async function eliminarMasivo() {
+    const ids = [...document.querySelectorAll('.check-item:checked')].map(c => parseInt(c.value));
+    if (!ids.length) { toast('Selecciona al menos un producto.', 'warning'); return; }
+    if (!confirm(`¿Eliminar ${ids.length} productos? Esta acción no se puede deshacer.`)) return;
+    try {
+        const res  = await fetch('/eliminar_masivo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        const data = await res.json();
+        if (data.ok) { toast(data.msg, 'success'); setTimeout(() => location.reload(), 800); }
+        else         { toast(data.msg, 'danger'); }
+    } catch { toast('❌ Error de conexión', 'danger'); }
+}
 
 // ── Venta con animación ────────────────────────────────────
 function onVender(e, form) {

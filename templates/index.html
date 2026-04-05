@@ -98,26 +98,37 @@
         {% endif %}
     </div>
 
-    <!-- BUSCADOR + EXCEL -->
+    <!-- BUSCADOR + EXCEL + PDF -->
     <div class="toolbar card">
         <form action="/" method="GET" style="flex:1">
             <input type="text" name="buscar" placeholder="🔍 Buscar repuesto..." value="{{ request.args.get('buscar','') }}" autocomplete="off">
         </form>
+        {% if puede_costos %}
         <form action="/subir_masivo" method="POST" enctype="multipart/form-data">
             <label class="btn btn-outline">
-                📁 Cargar Excel
+                📁 Excel
                 <input type="file" name="archivo_excel" accept=".xlsx,.xls" onchange="this.form.submit()" style="display:none">
             </label>
         </form>
+        {% endif %}
+        <a href="/reportes/ventas_pdf?dias=30" class="btn btn-outline" target="_blank">📄 PDF Ventas</a>
+        {% if puede_costos %}
+        <button class="btn btn-outline btn-red" onclick="toggleSeleccion()" id="btnSelec">☑️ Seleccionar</button>
+        <button class="btn btn-outline btn-red" id="btnElimMasivo" onclick="eliminarMasivo()" style="display:none">🗑️ Eliminar selección</button>
+        {% endif %}
     </div>
 
     <!-- FORM AGREGAR — solo admin/supervisor -->
     {% if puede_costos %}
-    <form action="/agregar" method="POST" class="card form-add">
+    <form action="/agregar" method="POST" class="card form-add" enctype="multipart/form-data">
         <input type="text"   name="nombre"  placeholder="Nombre del repuesto" required>
         <input type="number" name="p_costo" placeholder="Costo $"   step="0.01" min="0.01" required>
         <input type="number" name="p_venta" placeholder="Venta $"   step="0.01" min="0.01" required>
         <input type="number" name="stock"   placeholder="Cantidad"  min="0"     required>
+        <label class="btn btn-outline" style="cursor:pointer;font-size:.8em">
+            📷 Foto
+            <input type="file" name="foto" accept="image/*" style="display:none">
+        </label>
         <button type="submit" class="btn btn-primary">➕ Registrar</button>
     </form>
     {% endif %}
@@ -127,6 +138,10 @@
         <table>
             <thead>
                 <tr>
+                    <th id="thCheck" style="display:none;width:36px">
+                        <input type="checkbox" id="checkAll" onchange="toggleAll(this)">
+                    </th>
+                    <th style="width:52px">Foto</th>
                     <th>Producto</th>
                     {% if puede_costos %}<th>Costo</th>{% endif %}
                     <th>Venta</th>
@@ -137,6 +152,16 @@
             <tbody id="tbodyInventario">
             {% for p in inventario %}
             <tr class="fila" data-id="{{ p.id }}">
+                <td class="td-check" style="display:none">
+                    <input type="checkbox" class="check-item" value="{{ p.id }}">
+                </td>
+                <td>
+                    {% if p.foto_url %}
+                    <img src="/static/{{ p.foto_url }}" style="width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" onclick="verFoto('/static/{{ p.foto_url }}','{{ p.nombre }}')" class="foto-thumb">
+                    {% else %}
+                    <div style="width:40px;height:40px;border-radius:8px;background:var(--panel2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;opacity:.3;font-size:1.2em">📷</div>
+                    {% endif %}
+                </td>
                 <td class="td-left"><b>{{ p.nombre }}</b></td>
                 {% if puede_costos %}
                 <td>${{ "{:,.2f}".format(p.p_costo) }}</td>
@@ -158,14 +183,14 @@
                             <button type="submit" class="btn btn-success btn-sm">Vender</button>
                         </form>
                         {% if puede_costos %}
-                        <button class="btn btn-outline btn-sm" onclick="abrirEditar('{{ p.id }}','{{ p.nombre }}','{{ p.p_costo }}','{{ p.p_venta }}','{{ p.stock }}')">✏️</button>
+                        <button class="btn btn-outline btn-sm" onclick="abrirEditar('{{ p.id }}','{{ p.nombre }}','{{ p.p_costo }}','{{ p.p_venta }}','{{ p.stock }}','{{ p.foto_url or '' }}')">✏️</button>
                         <a href="/eliminar_producto/{{ p.id }}" class="btn btn-outline btn-sm btn-red" onclick="return onEliminar(event,this,'{{ p.nombre }}')">🗑️</a>
                         {% endif %}
                     </div>
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="5" class="empty">Sin resultados en inventario.</td></tr>
+            <tr><td colspan="7" class="empty">Sin resultados en inventario.</td></tr>
             {% endfor %}
             </tbody>
         </table>
@@ -200,7 +225,7 @@
 <div class="modal" id="modalEditar">
     <div class="modal-box" onclick="event.stopPropagation()">
         <h3>✏️ Editar Repuesto</h3>
-        <form id="formEditar" method="POST">
+        <form id="formEditar" method="POST" enctype="multipart/form-data">
             <label class="flabel">Nombre
                 <input type="text" name="nombre" id="eNombre" required>
             </label>
@@ -209,11 +234,30 @@
                 <label class="flabel">Venta $<input type="number" step="0.01" min="0.01" name="p_venta" id="eVenta" required></label>
             </div>
             <label class="flabel">Stock<input type="number" min="0" name="stock" id="eStock" required></label>
+            <label class="flabel">Foto del producto (opcional)
+                <div style="display:flex;gap:10px;align-items:center;margin-top:4px">
+                    <img id="eFotoPreview" src="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid var(--border);display:none">
+                    <label class="btn btn-outline btn-sm" style="cursor:pointer">
+                        📷 Cambiar foto
+                        <input type="file" name="foto" accept="image/*" style="display:none" onchange="previewFoto(this)">
+                    </label>
+                </div>
+            </label>
             <div class="modal-btns">
                 <button type="submit" class="btn btn-primary">💾 Guardar</button>
                 <button type="button" class="btn btn-outline" onclick="cerrarModal()">Cancelar</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- MODAL VER FOTO -->
+<div class="modal" id="modalFoto" onclick="document.getElementById('modalFoto').classList.remove('open')">
+    <div style="max-width:90vw;max-height:90vh;text-align:center" onclick="event.stopPropagation()">
+        <img id="fotoGrande" src="" style="max-width:100%;max-height:80vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.7)">
+        <div id="fotoNombre" style="color:#fff;margin-top:12px;font-weight:700;font-size:1.1em"></div>
+        <button onclick="document.getElementById('modalFoto').classList.remove('open')"
+                style="margin-top:12px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer">✕ Cerrar</button>
     </div>
 </div>
 
