@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caja · DriveFlow PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:.85em;margin-bottom:16px;transition:color .2s}
+        .back-link:hover{color:var(--primary)}
+        .page-title{font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;letter-spacing:2px;margin-bottom:20px}
+        .page-title span{color:var(--primary)}
+
+        /* Estado caja */
+        .caja-estado{border-radius:18px;padding:28px;margin-bottom:24px;border:2px solid}
+        .caja-abierta{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.4)}
+        .caja-cerrada{background:rgba(56,189,248,.06);border-color:rgba(56,189,248,.3)}
+        .estado-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 14px;border-radius:20px;font-size:.78em;font-weight:700;letter-spacing:.5px;margin-bottom:16px}
+        .pill-abierta{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.4)}
+        .pill-cerrada{background:rgba(56,189,248,.15);color:var(--primary);border:1px solid rgba(56,189,248,.3)}
+
+        /* Grid de stats en vivo */
+        .live-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+        .live-stat{background:var(--panel2);border-radius:12px;padding:14px;text-align:center}
+        .live-stat small{display:block;font-size:.65em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+        .live-stat strong{font-size:1.5em;font-weight:700}
+
+        /* Formularios */
+        .form-caja{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px}
+        .form-caja h3{font-family:'Rajdhani',sans-serif;font-size:1.15em;font-weight:700;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+        .flabel{display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted);margin-bottom:14px}
+        .monto-input{font-size:2em!important;font-weight:700!important;text-align:center;padding:16px!important;border-radius:12px!important}
+        textarea{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;width:100%;font-family:inherit;font-size:.9em;resize:vertical;min-height:60px}
+        textarea:focus{border-color:var(--primary)}
+
+        /* Diferencia */
+        .diferencia-box{border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+        .dif-ok{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3)}
+        .dif-warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3)}
+        .dif-err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+
+        /* Historial */
+        .hist-item{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;transition:transform .2s}
+        .hist-item:hover{transform:translateX(4px)}
+        .hist-fecha{font-size:.78em;color:var(--muted)}
+        .hist-monto{font-weight:700;font-size:1em}
+        .hist-dif{font-size:.82em;font-weight:700}
+        .dif-pos{color:var(--success)}.dif-neg{color:var(--danger)}.dif-neu{color:var(--muted)}
+        .badge-estado{font-size:.65em;font-weight:700;padding:2px 8px;border-radius:10px}
+        .be-abierta{background:rgba(16,185,129,.15);color:var(--success)}
+        .be-cerrada{background:rgba(56,189,248,.15);color:var(--primary)}
+
+        /* Ventas turno */
+        .ventas-scroll{max-height:300px;overflow-y:auto}
+    </style>
+</head>
+<body>
+<nav class="topbar">
+    <div class="topbar-left"><span class="logo-sm">DRIVE<span>FLOW</span></span></div>
+    <div class="topbar-right">
+        <span class="user-info">👤 {{ session.get('user_nombre') }}</span>
+        <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
+        <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        <a href="/" class="btn-logout">← Inventario</a>
+        <a href="/logout" class="btn-logout">Salir →</a>
+    </div>
+</nav>
+
+<div id="toasts"></div>
+
+<div class="container">
+    <a href="/" class="back-link">← Volver al inventario</a>
+    <div class="page-title">💵 Mi <span>Caja</span></div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flashes">{% for cat,msg in messages %}<div class="flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    {% if caja %}
+    <!-- ═══ CAJA ABIERTA ═══ -->
+    <div class="caja-estado caja-abierta">
+        <span class="estado-pill pill-abierta">🟢 CAJA ABIERTA</span>
+        <div style="font-size:.85em;color:var(--muted);margin-bottom:16px">
+            Abierta desde las <strong>{{ caja.fecha_apertura.strftime('%H:%M') }}</strong>
+            · Turno: <strong id="duracion">{{ caja.duracion }}</strong>
+        </div>
+
+        <!-- Stats en vivo -->
+        <div class="live-grid">
+            <div class="live-stat">
+                <small>💵 Efectivo inicial</small>
+                <strong style="color:var(--primary)">${{ "{:,.2f}".format(caja.monto_apertura) }}</strong>
+            </div>
+            <div class="live-stat">
+                <small>🛒 Ventas del turno</small>
+                <strong style="color:var(--success)" id="liveVentas">${{ "{:,.2f}".format(total_turno) }}</strong>
+            </div>
+            <div class="live-stat">
+                <small>📊 Transacciones</small>
+                <strong id="liveCant">{{ ventas_turno|length }}</strong>
+            </div>
+            <div class="live-stat">
+                <small>💰 Efectivo esperado</small>
+                <strong id="liveEsperado" style="color:var(--warning)">${{ "{:,.2f}".format(caja.monto_apertura + total_turno) }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ventas del turno -->
+    {% if ventas_turno %}
+    <div class="form-caja">
+        <h3>🧾 Ventas del turno ({{ ventas_turno|length }})</h3>
+        <div class="ventas-scroll card card-table" style="margin:0">
+            <table>
+                <thead><tr><th>Hora</th><th>Producto</th><th>Cliente</th><th>Cant.</th><th>Total</th></tr></thead>
+                <tbody>
+                {% for v in ventas_turno %}
+                <tr>
+                    <td style="font-size:.8em;color:var(--muted)">{{ v.fecha.strftime('%H:%M') }}</td>
+                    <td>{{ v.repuesto.nombre if v.repuesto else '—' }}</td>
+                    <td style="font-size:.82em;color:var(--muted)">{{ v.cliente_nombre or '—' }}</td>
+                    <td>{{ v.cantidad }}</td>
+                    <td style="color:var(--success);font-weight:700">+${{ "{:,.2f}".format(v.total_venta) }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Formulario cerrar caja -->
+    <div class="form-caja" style="border-color:rgba(239,68,68,.3)">
+        <h3>🔒 Cerrar caja</h3>
+        <form method="POST" action="/caja/cerrar" onsubmit="return confirmarCierre()">
+            <label class="flabel">Efectivo real en caja al cerrar $
+                <input type="number" name="monto_cierre" id="montoCierre" class="monto-input"
+                       step="0.01" min="0" placeholder="0.00" required
+                       oninput="calcDiferencia()">
+            </label>
+
+            <!-- Diferencia en vivo -->
+            <div id="diferenciaBox" class="diferencia-box dif-ok" style="display:none">
+                <div>
+                    <div style="font-size:.75em;color:var(--muted);margin-bottom:2px">Efectivo esperado</div>
+                    <div id="dEsperado" style="font-weight:700"></div>
+                </div>
+                <div style="font-size:2em">→</div>
+                <div style="text-align:right">
+                    <div style="font-size:.75em;color:var(--muted);margin-bottom:2px">Diferencia</div>
+                    <div id="dValor" style="font-size:1.5em;font-weight:700"></div>
+                </div>
+            </div>
+
+            <label class="flabel">Observaciones (opcional)
+                <textarea name="notas" placeholder="Ej: Billetes contados, pagos con tarjeta, etc."></textarea>
+            </label>
+            <button type="submit" class="btn btn-danger" style="width:100%;padding:14px;font-size:1em">
+                🔒 Cerrar caja y generar reporte
+            </button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- ═══ SIN CAJA ABIERTA ═══ -->
+    <div class="caja-estado caja-cerrada">
+        <span class="estado-pill pill-cerrada">⬛ CAJA CERRADA</span>
+        <p style="font-size:.88em;color:var(--muted);margin-bottom:0">No tienes una caja abierta. Abre una para comenzar tu turno.</p>
+    </div>
+
+    <!-- Formulario abrir caja -->
+    <div class="form-caja" style="border-color:rgba(16,185,129,.3)">
+        <h3>🟢 Abrir caja</h3>
+        <form method="POST" action="/caja/abrir">
+            <label class="flabel">Efectivo inicial en caja $
+                <input type="number" name="monto_apertura" class="monto-input"
+                       step="0.01" min="0" placeholder="0.00" required autofocus>
+            </label>
+            <label class="flabel">Observaciones (opcional)
+                <textarea name="notas" placeholder="Ej: Turno mañana, caja principal, etc."></textarea>
+            </label>
+            <button type="submit" class="btn btn-success" style="width:100%;padding:14px;font-size:1em">
+                🟢 Abrir caja y comenzar turno
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Historial de cajas -->
+    {% if historial %}
+    <h3 class="sec-title" style="margin-top:32px">📋 Mis últimas cajas</h3>
+    {% for h in historial %}
+    <a href="/caja/{{ h.id }}" style="text-decoration:none">
+        <div class="hist-item">
+            <div>
+                <div style="font-weight:600;font-size:.92em;margin-bottom:2px">
+                    {{ h.fecha_apertura.strftime('%d/%m/%Y') }}
+                    <span class="badge-estado {{ 'be-abierta' if h.estado=='abierta' else 'be-cerrada' }}">{{ h.estado.upper() }}</span>
+                </div>
+                <div class="hist-fecha">
+                    {{ h.fecha_apertura.strftime('%H:%M') }} →
+                    {{ h.fecha_cierre.strftime('%H:%M') if h.fecha_cierre else 'En curso' }}
+                    · {{ h.duracion }}
+                </div>
+            </div>
+            <div style="text-align:right">
+                <div class="hist-monto" style="color:var(--success)">${{ "{:,.2f}".format(h.total_ventas or 0) }}</div>
+                {% if h.diferencia is not none %}
+                <div class="hist-dif {{ 'dif-pos' if h.diferencia > 0 else ('dif-neg' if h.diferencia < 0 else 'dif-neu') }}">
+                    {% if h.diferencia > 0 %}+${{ "{:,.2f}".format(h.diferencia) }} sobrante
+                    {% elif h.diferencia < 0 %}-${{ "{:,.2f}".format(h.diferencia|abs) }} faltante
+                    {% else %}✅ Cuadra
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+    {% endif %}
+
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+const montoApertura = {{ caja.monto_apertura if caja else 0 }};
+const totalVentas   = {{ total_turno if caja else 0 }};
+const esperado      = montoApertura + totalVentas;
+
+function calcDiferencia() {
+    const cierre = parseFloat(document.getElementById('montoCierre').value) || 0;
+    const dif    = cierre - esperado;
+    const box    = document.getElementById('diferenciaBox');
+    box.style.display = 'flex';
+    document.getElementById('dEsperado').textContent = `$${esperado.toFixed(2)}`;
+    document.getElementById('dValor').textContent    = (dif >= 0 ? '+' : '') + `$${dif.toFixed(2)}`;
+
+    box.className = 'diferencia-box ' + (Math.abs(dif) < 0.01 ? 'dif-ok' : dif > 0 ? 'dif-ok' : 'dif-err');
+    document.getElementById('dValor').style.color =
+        Math.abs(dif) < 0.01 ? 'var(--success)' : dif > 0 ? 'var(--success)' : 'var(--danger)';
+}
+
+function confirmarCierre() {
+    const cierre = parseFloat(document.getElementById('montoCierre').value) || 0;
+    const dif    = cierre - esperado;
+    if (Math.abs(dif) > 0.01) {
+        const msg = dif > 0
+            ? `Hay un SOBRANTE de $${dif.toFixed(2)}. ¿Confirmar cierre?`
+            : `Hay un FALTANTE de $${Math.abs(dif).toFixed(2)}. ¿Confirmar cierre?`;
+        return confirm(msg);
+    }
+    return confirm('¿Confirmar cierre de caja? Todo cuadra perfectamente ✅');
+}
+
+// Actualizar stats en vivo cada 30s
+{% if caja %}
+async function actualizarLive() {
+    try {
+        const r = await fetch('/caja/resumen');
+        const d = await res.json();
+        if (d.abierta) {
+            document.getElementById('liveVentas').textContent   = `$${d.total_ventas.toFixed(2)}`;
+            document.getElementById('liveCant').textContent     = d.num_ventas;
+            document.getElementById('liveEsperado').textContent = `$${d.esperado.toFixed(2)}`;
+            document.getElementById('duracion').textContent     = d.duracion;
+        }
+    } catch {}
+}
+setInterval(actualizarLive, 30000);
+{% endif %}
+</script>
+</body>
+</html>

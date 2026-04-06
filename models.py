@@ -108,3 +108,28 @@ class OrdenCompra(db.Model):
     fecha_recibido = db.Column(db.DateTime, nullable=True)
     repuesto      = db.relationship('Repuesto', foreign_keys=[repuesto_id], lazy=True)
     usuario       = db.relationship('Usuario',  foreign_keys=[usuario_id],  lazy=True)
+
+
+class Caja(db.Model):
+    __tablename__ = 'caja'
+    id              = db.Column(db.Integer, primary_key=True)
+    usuario_id      = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
+    fecha_apertura  = db.Column(db.DateTime, default=datetime.utcnow)
+    fecha_cierre    = db.Column(db.DateTime, nullable=True)
+    monto_apertura  = db.Column(db.Float, nullable=False, default=0)
+    monto_cierre    = db.Column(db.Float, nullable=True)
+    total_ventas    = db.Column(db.Float, default=0)
+    total_efectivo  = db.Column(db.Float, nullable=True)
+    diferencia      = db.Column(db.Float, nullable=True)
+    notas_apertura  = db.Column(db.Text, default='')
+    notas_cierre    = db.Column(db.Text, default='')
+    estado          = db.Column(db.String(20), default='abierta')  # abierta | cerrada
+    usuario         = db.relationship('Usuario', foreign_keys=[usuario_id], lazy=True)
+
+    @property
+    def duracion(self):
+        fin = self.fecha_cierre or datetime.utcnow()
+        diff = fin - self.fecha_apertura
+        h = int(diff.total_seconds() // 3600)
+        m = int((diff.total_seconds() % 3600) // 60)
+        return f'{h}h {m}m'
