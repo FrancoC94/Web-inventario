@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proveedores · DriveFlow PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .page-title{font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;letter-spacing:2px;margin-bottom:20px}
+        .page-title span{color:var(--primary)}
+        .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:.85em;margin-bottom:16px;transition:color .2s}
+        .back-link:hover{color:var(--primary)}
+        .prov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-bottom:32px}
+        .prov-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;transition:transform .2s,box-shadow .2s;position:relative}
+        .prov-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.3)}
+        .prov-card.inactivo{opacity:.5}
+        .prov-avatar{width:52px;height:52px;border-radius:12px;background:rgba(56,189,248,.15);color:var(--primary);border:2px solid rgba(56,189,248,.3);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:1.4em;font-weight:700;flex-shrink:0}
+        .prov-top{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+        .prov-nombre{font-weight:700;font-size:1em;margin-bottom:2px}
+        .prov-empresa{font-size:.78em;color:var(--muted)}
+        .prov-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+        .pstat{background:var(--panel2);border-radius:8px;padding:8px;text-align:center}
+        .pstat small{display:block;font-size:.62em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+        .pstat strong{font-size:1em;font-weight:700}
+        .prov-contacto{font-size:.78em;color:var(--muted);display:flex;flex-direction:column;gap:3px;margin-bottom:14px}
+        .prov-actions{display:flex;gap:6px;flex-wrap:wrap}
+        .badge-inactivo{position:absolute;top:14px;right:14px;background:var(--danger);color:#fff;font-size:.62em;font-weight:700;padding:2px 7px;border-radius:10px}
+        .modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.8);align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+        .modal.open{display:flex}
+        .modal-box{background:var(--panel);padding:28px;border-radius:18px;width:min(480px,92vw);border:1px solid var(--border);box-shadow:0 25px 60px rgba(0,0,0,.6);animation:boxIn .25s ease;max-height:90vh;overflow-y:auto}
+        @keyframes boxIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+        .modal-box h3{margin-bottom:20px;font-family:'Rajdhani',sans-serif;font-size:1.2em}
+        .flabel{display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted);margin-bottom:12px}
+        .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .modal-btns{display:flex;gap:10px;margin-top:20px}
+        .modal-btns .btn{flex:1}
+        textarea{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;width:100%;font-family:inherit;font-size:.9em;resize:vertical;min-height:70px}
+        textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(56,189,248,.15)}
+        select{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:.9em;width:100%}
+    </style>
+</head>
+<body>
+<nav class="topbar">
+    <div class="topbar-left"><span class="logo-sm">DRIVE<span>FLOW</span></span></div>
+    <div class="topbar-right">
+        <span class="user-info">👤 {{ session.get('user_nombre') }}</span>
+        <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
+        <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        <a href="/" class="btn-logout">← Inventario</a>
+        <a href="/logout" class="btn-logout">Salir →</a>
+    </div>
+</nav>
+
+<div id="toasts"></div>
+
+<div class="container">
+    <a href="/" class="back-link">← Volver al inventario</a>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <div class="page-title">🚚 <span>Proveedores</span></div>
+        {% if puede_gestionar %}
+        <button onclick="document.getElementById('modalCrear').classList.add('open')" class="btn btn-primary">➕ Nuevo proveedor</button>
+        {% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flashes">{% for cat,msg in messages %}<div class="flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    <!-- Stats globales -->
+    <div class="kpis" style="margin-bottom:20px">
+        <div class="kpi kpi-blue"><small>🚚 TOTAL PROVEEDORES</small><strong>{{ proveedores|length }}</strong></div>
+        <div class="kpi kpi-green"><small>✅ ACTIVOS</small><strong>{{ proveedores|selectattr('activo')|list|length }}</strong></div>
+        <div class="kpi kpi-yellow"><small>⏳ ÓRDENES PENDIENTES</small><strong>{{ proveedores|sum(attribute='ordenes_pendientes') }}</strong></div>
+        <div class="kpi kpi-blue"><small>💰 TOTAL COMPRADO</small><strong>${{ "{:,.2f}".format(proveedores|sum(attribute='total_comprado')) }}</strong></div>
+    </div>
+
+    <!-- Buscador -->
+    <form action="/proveedores" method="GET" class="card" style="padding:12px 16px;margin-bottom:20px">
+        <input type="text" name="q" placeholder="🔍 Buscar proveedor..." value="{{ busqueda }}" autocomplete="off" style="width:100%">
+    </form>
+
+    <!-- Grid de proveedores -->
+    {% if proveedores %}
+    <div class="prov-grid">
+        {% for p in proveedores %}
+        <div class="prov-card {{ 'inactivo' if not p.activo }}">
+            {% if not p.activo %}<span class="badge-inactivo">INACTIVO</span>{% endif %}
+            <div class="prov-top">
+                <div class="prov-avatar">{{ p.nombre[0].upper() }}</div>
+                <div style="flex:1">
+                    <div class="prov-nombre">{{ p.nombre }}</div>
+                    <div class="prov-empresa">{{ p.empresa or 'Sin empresa' }}</div>
+                </div>
+            </div>
+            <div class="prov-stats">
+                <div class="pstat"><small>Órdenes</small><strong>{{ p.ordenes|length }}</strong></div>
+                <div class="pstat"><small>Pendientes</small><strong style="color:var(--warning)">{{ p.ordenes_pendientes }}</strong></div>
+                <div class="pstat"><small>Comprado</small><strong style="color:var(--success)">${{ "{:,.0f}".format(p.total_comprado) }}</strong></div>
+            </div>
+            <div class="prov-contacto">
+                {% if p.telefono %}<span>📞 {{ p.telefono }}</span>{% endif %}
+                {% if p.whatsapp %}<span>💬 {{ p.whatsapp }}</span>{% endif %}
+                {% if p.email %}<span>✉️ {{ p.email }}</span>{% endif %}
+                {% if p.direccion %}<span>📍 {{ p.direccion[:40] }}{% if p.direccion|length > 40 %}...{% endif %}</span>{% endif %}
+            </div>
+            <div class="prov-actions">
+                <a href="/proveedores/{{ p.id }}" class="btn btn-primary btn-sm">📋 Ver órdenes</a>
+                {% if puede_gestionar %}
+                <button class="btn btn-outline btn-sm" onclick="abrirEditar({{ p.id }},'{{ p.nombre }}','{{ p.empresa }}','{{ p.telefono }}','{{ p.whatsapp }}','{{ p.email }}','{{ p.direccion }}','{{ p.notas }}','{{ 1 if p.activo else 0 }}')">✏️</button>
+                <a href="/proveedores/eliminar/{{ p.id }}" class="btn btn-outline btn-sm btn-red" onclick="return confirm('¿Eliminar {{ p.nombre }}?')">🗑️</a>
+                {% if p.whatsapp %}
+                <a href="https://wa.me/{{ p.whatsapp|replace('+','') }}" target="_blank" class="btn btn-outline btn-sm" style="color:#25d366;border-color:rgba(37,211,102,.4)">💬</a>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:60px;opacity:.35">
+        <div style="font-size:3em;margin-bottom:12px">🚚</div>
+        <p>No hay proveedores registrados aún.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- MODAL CREAR -->
+<div class="modal" id="modalCrear">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3>➕ Nuevo Proveedor</h3>
+        <form method="POST" action="/proveedores/crear">
+            <label class="flabel">Nombre del contacto *<input type="text" name="nombre" required placeholder="Juan Pérez"></label>
+            <label class="flabel">Empresa / Distribuidora<input type="text" name="empresa" placeholder="Repuestos XYZ S.A."></label>
+            <div class="frow">
+                <label class="flabel">Teléfono<input type="text" name="telefono" placeholder="+593..."></label>
+                <label class="flabel">WhatsApp<input type="text" name="whatsapp" placeholder="+593..."></label>
+            </div>
+            <div class="frow">
+                <label class="flabel">Email<input type="email" name="email" placeholder="proveedor@mail.com"></label>
+                <label class="flabel">Dirección<input type="text" name="direccion" placeholder="Av. Principal..."></label>
+            </div>
+            <label class="flabel">Notas adicionales<textarea name="notas" placeholder="Días de entrega, condiciones de pago, etc."></textarea></label>
+            <div class="modal-btns">
+                <button type="submit" class="btn btn-primary">✅ Crear</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('modalCrear').classList.remove('open')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal" id="modalEditar">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3>✏️ Editar Proveedor</h3>
+        <form id="formEditar" method="POST">
+            <label class="flabel">Nombre *<input type="text" name="nombre" id="eNombre" required></label>
+            <label class="flabel">Empresa<input type="text" name="empresa" id="eEmpresa"></label>
+            <div class="frow">
+                <label class="flabel">Teléfono<input type="text" name="telefono" id="eTel"></label>
+                <label class="flabel">WhatsApp<input type="text" name="whatsapp" id="eWsp"></label>
+            </div>
+            <div class="frow">
+                <label class="flabel">Email<input type="email" name="email" id="eEmail"></label>
+                <label class="flabel">Dirección<input type="text" name="direccion" id="eDir"></label>
+            </div>
+            <label class="flabel">Notas<textarea name="notas" id="eNotas"></textarea></label>
+            <label class="flabel">Estado
+                <select name="activo" id="eActivo">
+                    <option value="1">✅ Activo</option>
+                    <option value="0">🚫 Inactivo</option>
+                </select>
+            </label>
+            <div class="modal-btns">
+                <button type="submit" class="btn btn-primary">💾 Guardar</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('modalEditar').classList.remove('open')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+function abrirEditar(id, nombre, empresa, tel, wsp, email, dir, notas, activo) {
+    document.getElementById('formEditar').action = `/proveedores/editar/${id}`;
+    document.getElementById('eNombre').value  = nombre;
+    document.getElementById('eEmpresa').value = empresa;
+    document.getElementById('eTel').value     = tel;
+    document.getElementById('eWsp').value     = wsp;
+    document.getElementById('eEmail').value   = email;
+    document.getElementById('eDir').value     = dir;
+    document.getElementById('eNotas').value   = notas;
+    document.getElementById('eActivo').value  = activo;
+    document.getElementById('modalEditar').classList.add('open');
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        document.getElementById('modalCrear').classList.remove('open');
+        document.getElementById('modalEditar').classList.remove('open');
+    }
+});
+</script>
+</body>
+</html>

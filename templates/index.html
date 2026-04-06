@@ -30,6 +30,8 @@
         <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
         <a href="/pos" class="btn-alerta" style="text-decoration:none">🛒 POS</a>
         <a href="/historial" class="btn-alerta" style="text-decoration:none">📋 Historial</a>
+        <a href="/proveedores" class="btn-alerta" style="text-decoration:none">🚚 Proveedores</a>
+        <button class="btn-alerta" onclick="toggleCalc()" title="Calculadora de precios">🧮</button>
         {% if session.get('user_rol') == 'admin' %}
         <a href="/usuarios" class="btn-alerta" style="text-decoration:none">👥 Usuarios</a>
         {% endif %}
@@ -289,10 +291,180 @@
     </div>
 </div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<!-- ═══════════════════════════════════════════════
+     CALCULADORA DE PRECIOS
+═══════════════════════════════════════════════ -->
+<div id="calcOverlay" onclick="toggleCalc()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;backdrop-filter:blur(3px)"></div>
+
+<div id="calcPanel" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:min(480px,94vw);background:var(--panel);border:1px solid var(--border);border-radius:20px;
+    z-index:401;box-shadow:0 25px 60px rgba(0,0,0,.5);overflow:hidden">
+
+    <!-- Header -->
+    <div style="background:var(--panel2);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">
+        <div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:1.1em;font-weight:700;letter-spacing:1px;color:var(--primary)">🧮 CALCULADORA DE PRECIOS</div>
+            <div style="font-size:.72em;color:var(--muted);margin-top:1px">Calcula precio de venta y margen de ganancia</div>
+        </div>
+        <button onclick="toggleCalc()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2em;transition:.2s" onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--muted)'">✕</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;border-bottom:1px solid var(--border)">
+        <button onclick="calcTab('margen')" id="tab-margen"
+            style="flex:1;padding:11px;border:none;cursor:pointer;font-family:inherit;font-size:.85em;font-weight:700;
+            background:var(--primary);color:#fff;transition:.2s">
+            📊 Calcular precio
+        </button>
+        <button onclick="calcTab('costo')" id="tab-costo"
+            style="flex:1;padding:11px;border:none;cursor:pointer;font-family:inherit;font-size:.85em;font-weight:600;
+            background:var(--panel2);color:var(--muted);transition:.2s">
+            💰 Calcular costo
+        </button>
+        <button onclick="calcTab('comparar')" id="tab-comparar"
+            style="flex:1;padding:11px;border:none;cursor:pointer;font-family:inherit;font-size:.85em;font-weight:600;
+            background:var(--panel2);color:var(--muted);transition:.2s">
+            ⚖️ Comparar
+        </button>
+    </div>
+
+    <!-- Contenido -->
+    <div style="padding:20px">
+
+        <!-- TAB 1: Calcular precio de venta -->
+        <div id="panel-margen">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <label style="display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted)">
+                    Costo del producto $
+                    <input type="number" id="c1-costo" placeholder="0.00" step="0.01" min="0"
+                        oninput="calcMargen()" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:1em;transition:.2s"
+                        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+                </label>
+                <label style="display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted)">
+                    Margen de ganancia %
+                    <input type="number" id="c1-margen" placeholder="30" step="1" min="0" max="999" value="30"
+                        oninput="calcMargen()" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:1em;transition:.2s"
+                        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+                </label>
+            </div>
+            <!-- Slider margen -->
+            <div style="margin-bottom:16px">
+                <div style="display:flex;justify-content:space-between;font-size:.72em;color:var(--muted);margin-bottom:4px">
+                    <span>0%</span><span>Margen rápido</span><span>200%</span>
+                </div>
+                <input type="range" id="c1-slider" min="0" max="200" value="30" step="1"
+                    oninput="document.getElementById('c1-margen').value=this.value;calcMargen()"
+                    style="width:100%;accent-color:var(--primary)">
+                <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                    <button onclick="setMargen(10)"  class="btn btn-outline btn-sm">10%</button>
+                    <button onclick="setMargen(20)"  class="btn btn-outline btn-sm">20%</button>
+                    <button onclick="setMargen(30)"  class="btn btn-outline btn-sm">30%</button>
+                    <button onclick="setMargen(50)"  class="btn btn-outline btn-sm">50%</button>
+                    <button onclick="setMargen(100)" class="btn btn-outline btn-sm">100%</button>
+                </div>
+            </div>
+            <!-- Resultado -->
+            <div id="res-margen" style="background:var(--panel2);border-radius:14px;padding:16px;border:1px solid var(--border)">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+                    <div>
+                        <div style="font-size:.68em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Precio venta</div>
+                        <div id="r1-venta" style="font-size:1.6em;font-weight:700;color:var(--primary)">$0.00</div>
+                    </div>
+                    <div>
+                        <div style="font-size:.68em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ganancia</div>
+                        <div id="r1-ganancia" style="font-size:1.6em;font-weight:700;color:var(--success)">$0.00</div>
+                    </div>
+                    <div>
+                        <div style="font-size:.68em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Margen real</div>
+                        <div id="r1-margenreal" style="font-size:1.6em;font-weight:700;color:var(--warning)">0%</div>
+                    </div>
+                </div>
+                <button id="btnUsarPrecio" onclick="usarPrecio()" class="btn btn-primary" style="width:100%;margin-top:14px;display:none">
+                    ➕ Usar este precio al registrar producto
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB 2: Calcular costo máximo -->
+        <div id="panel-costo" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <label style="display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted)">
+                    Precio de venta $
+                    <input type="number" id="c2-venta" placeholder="0.00" step="0.01" min="0"
+                        oninput="calcCosto()" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:1em"
+                        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+                </label>
+                <label style="display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted)">
+                    Margen deseado %
+                    <input type="number" id="c2-margen" placeholder="30" step="1" min="0" value="30"
+                        oninput="calcCosto()" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:1em"
+                        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+                </label>
+            </div>
+            <div id="res-costo" style="background:var(--panel2);border-radius:14px;padding:16px;border:1px solid var(--border)">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center">
+                    <div>
+                        <div style="font-size:.68em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Costo máximo</div>
+                        <div id="r2-costo" style="font-size:1.6em;font-weight:700;color:var(--primary)">$0.00</div>
+                        <div style="font-size:.72em;color:var(--muted);margin-top:2px">Si compras a más que esto, pierdes</div>
+                    </div>
+                    <div>
+                        <div style="font-size:.68em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ganancia esperada</div>
+                        <div id="r2-ganancia" style="font-size:1.6em;font-weight:700;color:var(--success)">$0.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: Comparar márgenes -->
+        <div id="panel-comparar" style="display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <label style="display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted)">
+                    Costo del producto $
+                    <input type="number" id="c3-costo" placeholder="0.00" step="0.01" min="0"
+                        oninput="calcComparar()" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:1em"
+                        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+                </label>
+                <label style="display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted)">
+                    Precio actual de venta $
+                    <input type="number" id="c3-venta" placeholder="0.00" step="0.01" min="0"
+                        oninput="calcComparar()" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:1em"
+                        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+                </label>
+            </div>
+            <div id="res-comparar" style="display:none">
+                <div style="background:var(--panel2);border-radius:14px;padding:16px;border:1px solid var(--border);margin-bottom:12px">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">
+                        <div>
+                            <div style="font-size:.68em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ganancia</div>
+                            <div id="r3-ganancia" style="font-size:1.5em;font-weight:700;color:var(--success)">$0.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size:.68em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Margen %</div>
+                            <div id="r3-margen" style="font-size:1.5em;font-weight:700">0%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:.68em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Markup</div>
+                            <div id="r3-markup" style="font-size:1.5em;font-weight:700;color:var(--warning)">0%</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Barra visual -->
+                <div style="font-size:.78em;color:var(--muted);margin-bottom:6px">Composición del precio:</div>
+                <div style="height:28px;border-radius:8px;overflow:hidden;display:flex">
+                    <div id="r3-barra-costo"  style="background:var(--panel2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.7em;font-weight:700;color:var(--text);transition:width .4s ease">Costo</div>
+                    <div id="r3-barra-gan"    style="background:rgba(16,185,129,.3);display:flex;align-items:center;justify-content:center;font-size:.7em;font-weight:700;color:var(--success);transition:width .4s ease">Ganancia</div>
+                </div>
+                <!-- Semáforo -->
+                <div id="r3-semaforo" style="margin-top:12px;padding:10px 14px;border-radius:10px;font-size:.82em;font-weight:600;text-align:center"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
 
 <!-- PWA: Botón instalar -->
-<div id="pwaBar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f172a;border-top:1px solid #1e3a5f;padding:12px 20px;display:none;align-items:center;justify-content:space-between;gap:12px;z-index:400;box-shadow:0 -4px 20px rgba(0,0,0,.4)">
+<div id="pwaBar" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#0f172a;border-top:1px solid #1e3a5f;padding:12px 20px;align-items:center;justify-content:space-between;gap:12px;z-index:400;box-shadow:0 -4px 20px rgba(0,0,0,.4)">
     <div style="display:flex;align-items:center;gap:10px">
         <img src="/static/icons/icon-192.png" style="width:36px;height:36px;border-radius:8px">
         <div>
@@ -306,7 +478,7 @@
     </div>
 </div>
 
-<script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 // ── Service Worker ─────────────────────────────────
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -344,6 +516,100 @@ window.addEventListener('appinstalled', () => {
     document.body.style.paddingBottom = '';
     console.log('✅ DriveFlow PWA instalada');
 });
+</script>
+
+<script>
+// ── Calculadora de precios ─────────────────────
+let calcVisible = false;
+
+function toggleCalc() {
+    calcVisible = !calcVisible;
+    document.getElementById('calcPanel').style.display   = calcVisible ? 'block' : 'none';
+    document.getElementById('calcOverlay').style.display = calcVisible ? 'block' : 'none';
+    if (calcVisible) setTimeout(() => document.getElementById('c1-costo').focus(), 100);
+}
+
+function calcTab(tab) {
+    ['margen','costo','comparar'].forEach(t => {
+        document.getElementById(`panel-${t}`).style.display = t === tab ? 'block' : 'none';
+        const btn = document.getElementById(`tab-${t}`);
+        btn.style.background = t === tab ? 'var(--primary)' : 'var(--panel2)';
+        btn.style.color      = t === tab ? '#fff' : 'var(--muted)';
+        btn.style.fontWeight = t === tab ? '700' : '600';
+    });
+}
+
+function setMargen(v) {
+    document.getElementById('c1-margen').value = v;
+    document.getElementById('c1-slider').value = v;
+    calcMargen();
+}
+
+function calcMargen() {
+    const costo  = parseFloat(document.getElementById('c1-costo').value)  || 0;
+    const margen = parseFloat(document.getElementById('c1-margen').value) || 0;
+    document.getElementById('c1-slider').value = Math.min(margen, 200);
+    if (costo <= 0) {
+        ['r1-venta','r1-ganancia','r1-margenreal'].forEach(id => document.getElementById(id).textContent = id === 'r1-margenreal' ? '0%' : '$0.00');
+        document.getElementById('btnUsarPrecio').style.display = 'none';
+        return;
+    }
+    const venta    = costo * (1 + margen / 100);
+    const ganancia = venta - costo;
+    const mReal    = (ganancia / venta) * 100;
+    document.getElementById('r1-venta').textContent      = `$${venta.toFixed(2)}`;
+    document.getElementById('r1-ganancia').textContent   = `$${ganancia.toFixed(2)}`;
+    document.getElementById('r1-margenreal').textContent = `${mReal.toFixed(1)}%`;
+    document.getElementById('btnUsarPrecio').style.display = 'block';
+}
+
+function usarPrecio() {
+    const costo = document.getElementById('c1-costo').value;
+    const venta = parseFloat(document.getElementById('r1-venta').textContent.replace('$',''));
+    const fC = document.querySelector('input[name="p_costo"]');
+    const fV = document.querySelector('input[name="p_venta"]');
+    if (fC && fV) {
+        fC.value = costo; fV.value = venta.toFixed(2);
+        toggleCalc();
+        toast('✅ Precios copiados al formulario', 'success');
+    } else {
+        navigator.clipboard.writeText(venta.toFixed(2));
+        toast(`📋 Precio $${venta.toFixed(2)} copiado`, 'success');
+    }
+}
+
+function calcCosto() {
+    const venta  = parseFloat(document.getElementById('c2-venta').value)  || 0;
+    const margen = parseFloat(document.getElementById('c2-margen').value) || 0;
+    if (venta <= 0) return;
+    const costo    = venta / (1 + margen / 100);
+    const ganancia = venta - costo;
+    document.getElementById('r2-costo').textContent    = `$${costo.toFixed(2)}`;
+    document.getElementById('r2-ganancia').textContent = `$${ganancia.toFixed(2)}`;
+}
+
+function calcComparar() {
+    const costo = parseFloat(document.getElementById('c3-costo').value) || 0;
+    const venta = parseFloat(document.getElementById('c3-venta').value) || 0;
+    const res   = document.getElementById('res-comparar');
+    if (costo <= 0 || venta <= 0) { res.style.display = 'none'; return; }
+    res.style.display = 'block';
+    const ganancia = venta - costo;
+    const margen   = (ganancia / venta) * 100;
+    const markup   = (ganancia / costo) * 100;
+    const pctCosto = (costo / venta) * 100;
+    document.getElementById('r3-ganancia').textContent = `$${ganancia.toFixed(2)}`;
+    document.getElementById('r3-margen').textContent   = `${margen.toFixed(1)}%`;
+    document.getElementById('r3-markup').textContent   = `${markup.toFixed(1)}%`;
+    document.getElementById('r3-barra-costo').style.width = `${Math.min(100,pctCosto).toFixed(1)}%`;
+    document.getElementById('r3-barra-gan').style.width   = `${Math.max(0,100-pctCosto).toFixed(1)}%`;
+    const sem = document.getElementById('r3-semaforo');
+    if      (ganancia < 0)  { sem.style.cssText='background:rgba(239,68,68,.15);color:var(--danger);padding:10px 14px;border-radius:10px;font-size:.82em;font-weight:600;text-align:center;margin-top:12px';  sem.textContent='🔴 Estás vendiendo a PÉRDIDA. Sube el precio o reduce el costo.'; }
+    else if (margen < 10)   { sem.style.cssText='background:rgba(239,68,68,.15);color:var(--danger);padding:10px 14px;border-radius:10px;font-size:.82em;font-weight:600;text-align:center;margin-top:12px';  sem.textContent='🔴 Margen muy bajo (< 10%). Difícil cubrir gastos.'; }
+    else if (margen < 20)   { sem.style.cssText='background:rgba(245,158,11,.15);color:var(--warning);padding:10px 14px;border-radius:10px;font-size:.82em;font-weight:600;text-align:center;margin-top:12px'; sem.textContent='🟡 Margen aceptable. Considera subir el precio.'; }
+    else if (margen < 40)   { sem.style.cssText='background:rgba(16,185,129,.15);color:var(--success);padding:10px 14px;border-radius:10px;font-size:.82em;font-weight:600;text-align:center;margin-top:12px'; sem.textContent='🟢 Buen margen. Precio competitivo y rentable.'; }
+    else                    { sem.style.cssText='background:rgba(56,189,248,.15);color:var(--primary);padding:10px 14px;border-radius:10px;font-size:.82em;font-weight:600;text-align:center;margin-top:12px';  sem.textContent='🔵 Margen excelente. Muy rentable.'; }
+}
 </script>
 </body>
 </html>

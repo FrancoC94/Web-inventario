@@ -67,3 +67,44 @@ class HistorialStock(db.Model):
     stock_nuevo    = db.Column(db.Integer, nullable=False)
     accion         = db.Column(db.String(50), nullable=False)
     usuario        = db.relationship('Usuario', foreign_keys=[usuario_id], lazy=True)
+
+
+class Proveedor(db.Model):
+    __tablename__ = 'proveedor'
+    id            = db.Column(db.Integer, primary_key=True)
+    nombre        = db.Column(db.String(100), nullable=False)
+    empresa       = db.Column(db.String(100), default='')
+    telefono      = db.Column(db.String(30),  default='')
+    whatsapp      = db.Column(db.String(30),  default='')
+    email         = db.Column(db.String(100), default='')
+    direccion     = db.Column(db.String(200), default='')
+    notas         = db.Column(db.Text,        default='')
+    activo        = db.Column(db.Boolean,     default=True)
+    creado_en     = db.Column(db.DateTime,    default=datetime.utcnow)
+    ordenes       = db.relationship('OrdenCompra', backref='proveedor', cascade='all, delete-orphan', lazy=True)
+
+    @property
+    def total_comprado(self):
+        return sum(o.total for o in self.ordenes if o.estado == 'recibido')
+
+    @property
+    def ordenes_pendientes(self):
+        return sum(1 for o in self.ordenes if o.estado == 'pendiente')
+
+
+class OrdenCompra(db.Model):
+    __tablename__ = 'orden_compra'
+    id            = db.Column(db.Integer, primary_key=True)
+    proveedor_id  = db.Column(db.Integer, db.ForeignKey('proveedor.id', ondelete='CASCADE'), nullable=False)
+    repuesto_id   = db.Column(db.Integer, db.ForeignKey('repuesto.id', ondelete='SET NULL'), nullable=True)
+    usuario_id    = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    producto_nombre = db.Column(db.String(100), nullable=False)
+    cantidad      = db.Column(db.Integer, nullable=False, default=1)
+    precio_unitario = db.Column(db.Float,   nullable=False, default=0)
+    total         = db.Column(db.Float,     nullable=False, default=0)
+    estado        = db.Column(db.String(20), default='pendiente')  # pendiente | recibido | cancelado
+    notas         = db.Column(db.Text,      default='')
+    fecha_pedido  = db.Column(db.DateTime,  default=datetime.utcnow)
+    fecha_recibido = db.Column(db.DateTime, nullable=True)
+    repuesto      = db.relationship('Repuesto', foreign_keys=[repuesto_id], lazy=True)
+    usuario       = db.relationship('Usuario',  foreign_keys=[usuario_id],  lazy=True)

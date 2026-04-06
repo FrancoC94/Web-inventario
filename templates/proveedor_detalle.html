@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ p.nombre }} · DriveFlow PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:.85em;margin-bottom:16px;transition:color .2s}
+        .back-link:hover{color:var(--primary)}
+        .prov-header{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px;display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+        .prov-avatar{width:64px;height:64px;border-radius:14px;background:rgba(56,189,248,.15);color:var(--primary);border:2px solid rgba(56,189,248,.3);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;flex-shrink:0}
+        .prov-info{flex:1}
+        .prov-nombre{font-family:'Rajdhani',sans-serif;font-size:1.6em;font-weight:700;letter-spacing:1px;margin-bottom:2px}
+        .prov-empresa{color:var(--muted);font-size:.88em;margin-bottom:10px}
+        .contactos{display:flex;gap:12px;flex-wrap:wrap}
+        .ctag{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:.78em;color:var(--text);text-decoration:none;transition:.2s}
+        .ctag:hover{border-color:var(--primary);color:var(--primary)}
+        .orden-estado{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.72em;font-weight:700}
+        .estado-pendiente{background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3)}
+        .estado-recibido{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
+        .estado-cancelado{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+        .modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.8);align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+        .modal.open{display:flex}
+        .modal-box{background:var(--panel);padding:28px;border-radius:18px;width:min(500px,92vw);border:1px solid var(--border);box-shadow:0 25px 60px rgba(0,0,0,.6);animation:boxIn .25s ease;max-height:90vh;overflow-y:auto}
+        @keyframes boxIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+        .modal-box h3{margin-bottom:20px;font-family:'Rajdhani',sans-serif;font-size:1.2em}
+        .flabel{display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted);margin-bottom:12px}
+        .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .modal-btns{display:flex;gap:10px;margin-top:20px}
+        .modal-btns .btn{flex:1}
+        textarea{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;width:100%;font-family:inherit;font-size:.9em;resize:vertical;min-height:60px}
+        textarea:focus{border-color:var(--primary)}
+        select{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:.9em;width:100%}
+        .sec-title{margin:24px 0 12px;font-family:'Rajdhani',sans-serif;font-size:1.2em;font-weight:700;letter-spacing:1px}
+        .total-row td{font-weight:700;color:var(--primary);border-top:2px solid var(--border)!important}
+    </style>
+</head>
+<body>
+<nav class="topbar">
+    <div class="topbar-left"><span class="logo-sm">DRIVE<span>FLOW</span></span></div>
+    <div class="topbar-right">
+        <span class="user-info">👤 {{ session.get('user_nombre') }}</span>
+        <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
+        <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        <a href="/proveedores" class="btn-logout">← Proveedores</a>
+        <a href="/logout" class="btn-logout">Salir →</a>
+    </div>
+</nav>
+
+<div id="toasts"></div>
+
+<div class="container">
+    <a href="/proveedores" class="back-link">← Volver a proveedores</a>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flashes">{% for cat,msg in messages %}<div class="flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    <!-- Header proveedor -->
+    <div class="prov-header">
+        <div class="prov-avatar">{{ p.nombre[0].upper() }}</div>
+        <div class="prov-info">
+            <div class="prov-nombre">{{ p.nombre }}</div>
+            <div class="prov-empresa">{{ p.empresa or 'Sin empresa registrada' }}</div>
+            <div class="contactos">
+                {% if p.telefono %}<a href="tel:{{ p.telefono }}" class="ctag">📞 {{ p.telefono }}</a>{% endif %}
+                {% if p.whatsapp %}<a href="https://wa.me/{{ p.whatsapp|replace('+','') }}" target="_blank" class="ctag" style="color:#25d366;border-color:rgba(37,211,102,.4)">💬 {{ p.whatsapp }}</a>{% endif %}
+                {% if p.email %}<a href="mailto:{{ p.email }}" class="ctag">✉️ {{ p.email }}</a>{% endif %}
+                {% if p.direccion %}<span class="ctag">📍 {{ p.direccion }}</span>{% endif %}
+            </div>
+            {% if p.notas %}<div style="margin-top:10px;font-size:.82em;color:var(--muted);background:var(--panel2);padding:8px 12px;border-radius:8px">📝 {{ p.notas }}</div>{% endif %}
+        </div>
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:200px">
+            <div class="kpi kpi-blue" style="padding:14px"><small>ÓRDENES</small><strong>{{ ordenes|length }}</strong></div>
+            <div class="kpi kpi-yellow" style="padding:14px"><small>PENDIENTES</small><strong style="color:var(--warning)">{{ p.ordenes_pendientes }}</strong></div>
+            <div class="kpi kpi-green" style="padding:14px;grid-column:span 2"><small>TOTAL COMPRADO</small><strong style="color:var(--success)">${{ "{:,.2f}".format(p.total_comprado) }}</strong></div>
+        </div>
+    </div>
+
+    <!-- Botón nueva orden -->
+    {% if puede_gestionar %}
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <h3 class="sec-title" style="margin:0">📦 Órdenes de Compra</h3>
+        <button onclick="document.getElementById('modalOrden').classList.add('open')" class="btn btn-primary">➕ Nueva orden</button>
+    </div>
+    {% else %}
+    <h3 class="sec-title">📦 Órdenes de Compra</h3>
+    {% endif %}
+
+    <!-- Tabla órdenes -->
+    <div class="card card-table">
+        <table>
+            <thead>
+                <tr><th>Fecha</th><th>Producto</th><th>Cant.</th><th>P. Unit.</th><th>Total</th><th>Estado</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+            {% for o in ordenes %}
+            <tr>
+                <td style="font-size:.8em;color:var(--muted);white-space:nowrap">{{ o.fecha_pedido.strftime('%d/%m/%Y') }}</td>
+                <td class="td-left">
+                    <b>{{ o.producto_nombre }}</b>
+                    {% if o.repuesto %}<div style="font-size:.72em;color:var(--muted)">→ Vinculado al inventario</div>{% endif %}
+                    {% if o.notas %}<div style="font-size:.72em;color:var(--muted)">📝 {{ o.notas }}</div>{% endif %}
+                </td>
+                <td>{{ o.cantidad }}</td>
+                <td>${{ "{:,.2f}".format(o.precio_unitario) }}</td>
+                <td style="color:var(--primary);font-weight:700">${{ "{:,.2f}".format(o.total) }}</td>
+                <td>
+                    <span class="orden-estado estado-{{ o.estado }}">
+                        {% if o.estado=='pendiente' %}⏳
+                        {% elif o.estado=='recibido' %}✅
+                        {% else %}❌{% endif %}
+                        {{ o.estado.upper() }}
+                    </span>
+                    {% if o.fecha_recibido %}<div style="font-size:.7em;color:var(--muted);margin-top:2px">{{ o.fecha_recibido.strftime('%d/%m/%Y') }}</div>{% endif %}
+                </td>
+                <td>
+                    {% if o.estado == 'pendiente' and puede_gestionar %}
+                    <div class="actions">
+                        <form action="/proveedores/orden/{{ o.id }}/recibir" method="POST" onsubmit="return confirm('¿Marcar como recibida? Se actualizará el stock.')">
+                            <button type="submit" class="btn btn-success btn-sm">✅ Recibir</button>
+                        </form>
+                        <a href="/proveedores/orden/{{ o.id }}/cancelar" class="btn btn-outline btn-sm btn-red" onclick="return confirm('¿Cancelar orden?')">❌</a>
+                    </div>
+                    {% else %}—{% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty">Sin órdenes registradas. ¡Crea la primera!</td></tr>
+            {% endfor %}
+            {% if ordenes %}
+            <tr class="total-row">
+                <td colspan="4" style="text-align:right;padding-right:16px">TOTAL GENERAL:</td>
+                <td>${{ "{:,.2f}".format(ordenes|sum(attribute='total')) }}</td>
+                <td colspan="2"></td>
+            </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL NUEVA ORDEN -->
+<div class="modal" id="modalOrden">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3>📦 Nueva Orden de Compra</h3>
+        <form method="POST" action="/proveedores/{{ p.id }}/orden">
+            <label class="flabel">Producto del inventario (opcional)
+                <select name="repuesto_id" id="selRepuesto" onchange="autoFill(this)">
+                    <option value="">— Seleccionar del inventario —</option>
+                    {% for r in repuestos %}
+                    <option value="{{ r.id }}" data-costo="{{ r.p_costo }}" data-nombre="{{ r.nombre }}">
+                        {{ r.nombre }} (Stock: {{ r.stock }}, Costo: ${{ r.p_costo }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="flabel">Nombre del producto *
+                <input type="text" name="producto_nombre" id="oNombre" placeholder="Nombre si no está en inventario" required>
+            </label>
+            <div class="frow">
+                <label class="flabel">Cantidad *<input type="number" name="cantidad" id="oCant" value="1" min="1" required oninput="calcTotal()"></label>
+                <label class="flabel">Precio unitario $<input type="number" name="precio_unitario" id="oPrecio" step="0.01" min="0" value="0" required oninput="calcTotal()"></label>
+            </div>
+            <div style="background:var(--panel2);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:.82em;color:var(--muted)">Total de la orden:</span>
+                <span id="oTotal" style="font-size:1.3em;font-weight:700;color:var(--primary)">$0.00</span>
+            </div>
+            <label class="flabel">Notas<textarea name="notas" placeholder="Condiciones, plazo de entrega, etc."></textarea></label>
+            <div class="modal-btns">
+                <button type="submit" class="btn btn-primary">📦 Crear orden</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('modalOrden').classList.remove('open')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+function autoFill(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    if (opt.value) {
+        document.getElementById('oNombre').value = opt.dataset.nombre;
+        document.getElementById('oPrecio').value = opt.dataset.costo;
+        calcTotal();
+    }
+}
+function calcTotal() {
+    const c = parseFloat(document.getElementById('oCant').value)   || 0;
+    const p = parseFloat(document.getElementById('oPrecio').value) || 0;
+    document.getElementById('oTotal').textContent = `$${(c*p).toFixed(2)}`;
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('modalOrden').classList.remove('open');
+});
+</script>
+</body>
+</html>
