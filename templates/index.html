@@ -479,44 +479,6 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-// ── Service Worker ─────────────────────────────────
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/static/sw.js')
-            .then(reg => console.log('✅ SW registrado:', reg.scope))
-            .catch(err => console.log('SW error:', err));
-    });
-}
-
-// ── Botón instalar PWA ─────────────────────────────
-let deferredPrompt = null;
-window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    deferredPrompt = e;
-    const bar = document.getElementById('pwaBar');
-    bar.style.display = 'flex';
-    // Agregar padding al body para que no tape contenido
-    document.body.style.paddingBottom = '80px';
-});
-
-function instalarPWA() {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(r => {
-        if (r.outcome === 'accepted') {
-            document.getElementById('pwaBar').style.display = 'none';
-            document.body.style.paddingBottom = '';
-        }
-        deferredPrompt = null;
-    });
-}
-
-window.addEventListener('appinstalled', () => {
-    document.getElementById('pwaBar').style.display = 'none';
-    document.body.style.paddingBottom = '';
-    console.log('✅ DriveFlow PWA instalada');
-});
-</script>
 
 <script>
 // ── Calculadora de precios ─────────────────────
