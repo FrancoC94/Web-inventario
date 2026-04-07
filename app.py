@@ -3,32 +3,37 @@ from flask import Flask, session, redirect, url_for, request, send_from_director
 from extensions import db
 from dotenv import load_dotenv
 
-# Cargar variables de entorno del archivo .env
+# Cargar variables de entorno
 load_dotenv()
 
 def create_app():
     app = Flask(__name__)
 
     # ── Configuración de Base de Datos ────────────────
-    # En local usa tu MariaDB del .env, en Render usa la Variable de Entorno
+    # Si estás en Render, usará la DATABASE_URL que pongas en el panel.
+    # Si estás en tu PC y no hay DATABASE_URL, creará un sqlite temporal.
     default_db = 'sqlite:///driveflow.db'
     db_url = os.environ.get('DATABASE_URL', default_db)
 
-    # Corrección automática de protocolos para SQLAlchemy
+    # CORRECCIÓN DE PROTOCOLO (Muy importante para Render)
     if db_url.startswith('mysql://'):
-        # Cambia mysql:// a mysql+mysqlconnector:// para MariaDB/MySQL
-        db_url = db_url.replace('mysql://', 'mysql+mysqlconnector://', 1)
+        # Usamos pymysql porque ya lo tienes en tu requirements.txt
+        db_url = db_url.replace('mysql://', 'mysql+pymysql://', 1)
     elif db_url.startswith('postgres://'):
-        # Render a veces entrega postgres:// pero SQLAlchemy pide postgresql://
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
 
     app.config['SQLALCHEMY_DATABASE_URI']        = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_ENGINE_OPTIONS']      = {'pool_recycle': 280, 'pool_pre_ping': True}
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']      = {
+        'pool_recycle': 280,
+        'pool_pre_ping': True,
+        'pool_size': 10,
+        'max_overflow': 20
+    }
     app.config['MAX_CONTENT_LENGTH']             = 5 * 1024 * 1024
     app.secret_key = os.environ.get('SECRET_KEY', 'driveflow-secret-2026')
 
-    # Inicializar la base de datos con la app
+    # Inicializar DB
     db.init_app(app)
 
     # ── Registro de Blueprints ────────────────────────
@@ -54,7 +59,7 @@ def create_app():
     app.register_blueprint(proveedores_bp)
     app.register_blueprint(caja_bp)
 
-    # ── Rutas para PWA ────────────────────────────────
+    # ── PWA ──────────────────────────────────────────
     @app.route('/sw.js')
     def sw():
         return send_from_directory(app.static_folder, 'sw.js', mimetype='application/javascript')
@@ -63,7 +68,7 @@ def create_app():
     def manifest():
         return send_from_directory(app.static_folder, 'manifest.json', mimetype='application/manifest+json')
 
-    # ── Middleware: Protección de rutas ───────────────
+    # ── Seguridad ────────────────────────────────────
     @app.before_request
     def require_login():
         endpoint = request.endpoint or ''
@@ -72,26 +77,22 @@ def create_app():
             if 'user_id' not in session:
                 return redirect(url_for('auth.login'))
 
-    # ── Configuración Inicial (Tablas y Admin) ────────
+    # ── Tablas y Admin ───────────────────────────────
     with app.app_context():
         from models import Usuario
         db.create_all()
-        # Crear admin por defecto si no existe
         if not Usuario.query.filter_by(username='admin').first():
             u = Usuario(username='admin', nombre='Administrador', rol='admin')
             u.set_password('admin123')
             db.session.add(u)
             db.session.commit()
-            print('✅ Base de datos sincronizada y usuario admin verificado.')
+            print('✅ Sistema listo: Admin verificado.')
 
     return app
 
-# ── INSTANCIA GLOBAL (Obligatorio para Render/Gunicorn) ──
+# ── INSTANCIA PARA RENDER ──────────────────────────
 app = create_app()
 
-# ── Punto de entrada para ejecución local ───────────
 if __name__ == '__main__':
-    # Render asigna un puerto automáticamente en la variable PORT
     port = int(os.environ.get('PORT', 5050))
-    # debug=True solo se activa si corres el archivo directamente en tu PC
     app.run(host='0.0.0.0', port=port, debug=True)
