@@ -8,11 +8,13 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
 
-    # ── Base de datos ──────────────────────────────
+    # ── Configuración de Base de Datos ──────────────
     default_db = 'sqlite:////data/driveflow.db' if os.path.isdir('/data') else 'sqlite:///driveflow.db'
     db_url = os.environ.get('DATABASE_URL', default_db)
+
+    # Para MariaDB usando SQLAlchemy + mysqlconnector
     if db_url.startswith('mysql://'):
-        db_url = db_url.replace('mysql://', 'mysql+pymysql://', 1)
+        db_url = db_url.replace('mysql://', 'mysql+mysqlconnector://', 1)
 
     app.config['SQLALCHEMY_DATABASE_URI']        = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -30,9 +32,9 @@ def create_app():
     from routes.usuarios   import usuarios_bp
     from routes.historial  import historial_bp
     from routes.pos        import pos_bp
-    from routes.reportes     import reportes_bp
+    from routes.reportes   import reportes_bp
     from routes.proveedores import proveedores_bp
-    from routes.caja        import caja_bp
+    from routes.caja       import caja_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(inventario_bp)
@@ -65,8 +67,8 @@ def create_app():
 
     # ── Crear tablas + admin ───────────────────────
     with app.app_context():
+        from models import Usuario  # importar modelos antes de crear tablas
         db.create_all()
-        from models import Usuario
         if not Usuario.query.filter_by(username='admin').first():
             u = Usuario(username='admin', nombre='Administrador', rol='admin')
             u.set_password('admin123')
@@ -76,16 +78,10 @@ def create_app():
 
     return app
 
-
-# ── Para Render y local ────────────────────────────
+# ── Crear la app ─────────────────────────────────
 app = create_app()
 
+# ── Ejecutar ────────────────────────────────────
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5050))
-    app.run(host='0.0.0.0', port=port, debug=False)
-    # ── Para Render y local ────────────────────────────
-    app = create_app()
-
-    if __name__ == '__main__':
-        port = int(os.environ.get('PORT', 5050))
-        app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)
