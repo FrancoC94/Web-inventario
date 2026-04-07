@@ -3,21 +3,19 @@ from flask import Flask, session, redirect, url_for, request, send_from_director
 from extensions import db
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
+# ── Cargar variables de entorno ──────────────────
 load_dotenv()
 
 def create_app():
     app = Flask(__name__)
 
-    # ── Configuración de Base de Datos ────────────────
-    # Si estás en Render, usará la DATABASE_URL que pongas en el panel.
-    # Si estás en tu PC y no hay DATABASE_URL, creará un sqlite temporal.
-    default_db = 'sqlite:///driveflow.db'
+    # ── Configuración de Base de Datos ─────────────
+    # Render requiere /data para sqlite, si no existe usa relativo
+    default_db = 'sqlite:////data/driveflow.db' if os.path.isdir('/data') else 'sqlite:///driveflow.db'
     db_url = os.environ.get('DATABASE_URL', default_db)
 
-    # CORRECCIÓN DE PROTOCOLO (Muy importante para Render)
+    # Ajuste de protocolos según el motor
     if db_url.startswith('mysql://'):
-        # Usamos pymysql porque ya lo tienes en tu requirements.txt
         db_url = db_url.replace('mysql://', 'mysql+pymysql://', 1)
     elif db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
@@ -26,9 +24,7 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS']      = {
         'pool_recycle': 280,
-        'pool_pre_ping': True,
-        'pool_size': 10,
-        'max_overflow': 20
+        'pool_pre_ping': True
     }
     app.config['MAX_CONTENT_LENGTH']             = 5 * 1024 * 1024
     app.secret_key = os.environ.get('SECRET_KEY', 'driveflow-secret-2026')
@@ -36,7 +32,7 @@ def create_app():
     # Inicializar DB
     db.init_app(app)
 
-    # ── Registro de Blueprints ────────────────────────
+    # ── Registro de Blueprints ─────────────────────
     from routes.auth        import auth_bp
     from routes.inventario  import inventario_bp
     from routes.ventas      import ventas_bp
@@ -59,7 +55,7 @@ def create_app():
     app.register_blueprint(proveedores_bp)
     app.register_blueprint(caja_bp)
 
-    # ── PWA ──────────────────────────────────────────
+    # ── PWA ───────────────────────────────────────
     @app.route('/sw.js')
     def sw():
         return send_from_directory(app.static_folder, 'sw.js', mimetype='application/javascript')
@@ -68,7 +64,7 @@ def create_app():
     def manifest():
         return send_from_directory(app.static_folder, 'manifest.json', mimetype='application/manifest+json')
 
-    # ── Seguridad ────────────────────────────────────
+    # ── Seguridad: login obligatorio ───────────────
     @app.before_request
     def require_login():
         endpoint = request.endpoint or ''
@@ -77,22 +73,22 @@ def create_app():
             if 'user_id' not in session:
                 return redirect(url_for('auth.login'))
 
-    # ── Tablas y Admin ───────────────────────────────
+    # ── Crear tablas y admin inicial ──────────────
     with app.app_context():
         from models import Usuario
         db.create_all()
         if not Usuario.query.filter_by(username='admin').first():
-            u = Usuario(username='admin', nombre='Administrador', rol='admin')
-            u.set_password('admin123')
-            db.session.add(u)
+            admin = Usuario(username='admin', nombre='Administrador', rol='admin')
+            admin.set_password('admin123')
+            db.session.add(admin)
             db.session.commit()
-            print('✅ Sistema listo: Admin verificado.')
+            print('✅ Sistema listo: Admin verificado (admin/admin123)')
 
     return app
 
-# ── INSTANCIA PARA RENDER ──────────────────────────
+# ── Crear instancia para Render ─────────────────
 app = create_app()
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5050))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)
