@@ -2,56 +2,48 @@ import os
 from flask import Flask, session, redirect, url_for, request, send_from_directory
 from extensions import db
 from dotenv import load_dotenv
-from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
 
 load_dotenv()
+
 
 def create_app():
     app = Flask(__name__)
 
-    # ── Configuración de Base de Datos ─────────────
-    default_db = 'sqlite:////data/driveflow.db' if os.path.isdir('/data') else 'sqlite:///driveflow.db'
-    db_url = os.environ.get('DATABASE_URL', default_db)
+    # ── Base de datos (solo MariaDB/MySQL/Postgres online) ─────────────
+    db_url = os.environ.get("DATABASE_URL")
+    if not db_url:
+        raise RuntimeError("❌ Falta la variable DATABASE_URL")
 
-    # Asegurarse de usar pymysql para MySQL
-    if db_url.startswith('mysql://'):
-        db_url = db_url.replace('mysql://', 'mysql+pymysql://', 1)
-    elif db_url.startswith('postgres://'):
-        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    # Compatibilidad Render / SQLAlchemy
+    if db_url.startswith("mysql://"):
+        db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+    elif db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-    app.config['SQLALCHEMY_DATABASE_URI']        = db_url
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_ENGINE_OPTIONS']      = {'pool_recycle': 280, 'pool_pre_ping': True}
-    app.config['MAX_CONTENT_LENGTH']             = 5 * 1024 * 1024
-    app.secret_key = os.environ.get('SECRET_KEY', 'driveflow-secret-2026')
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_recycle": 280,
+        "pool_pre_ping": True
+    }
 
-    # ── Inicializar DB ────────────────────────────
+    # ── Configuración general ───────────────────────────────────────────
+    app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+    app.secret_key = os.environ.get("SECRET_KEY", "driveflow-secret-2026")
+
     db.init_app(app)
 
-    # Probar conexión, si falla usar SQLite local
-    try:
-        with app.app_context():
-            db.session.execute(text('SELECT 1'))
-    except OperationalError:
-        print("⚠️ No se pudo conectar a DATABASE_URL, usando SQLite temporal")
-        db_url = default_db
-        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-        db.init_app(app)
-        with app.app_context():
-            db.session.execute(text('SELECT 1'))
-
-    # ── Blueprints ────────────────────────────────
-    from routes.auth        import auth_bp
-    from routes.inventario  import inventario_bp
-    from routes.ventas      import ventas_bp
-    from routes.asistente   import asistente_bp
-    from routes.usuarios    import usuarios_bp
-    from routes.historial   import historial_bp
-    from routes.pos         import pos_bp
-    from routes.reportes    import reportes_bp
+    # ── Blueprints ─────────────────────────────────────────────────────
+    from routes.auth import auth_bp
+    from routes.inventario import inventario_bp
+    from routes.ventas import ventas_bp
+    from routes.asistente import asistente_bp
+    from routes.usuarios import usuarios_bp
+    from routes.historial import historial_bp
+    from routes.pos import pos_bp
+    from routes.reportes import reportes_bp
     from routes.proveedores import proveedores_bp
-    from routes.caja        import caja_bp
+    from routes.caja import caja_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(inventario_bp)
@@ -59,45 +51,65 @@ def create_app():
     app.register_blueprint(asistente_bp)
     app.register_blueprint(usuarios_bp)
     app.register_blueprint(historial_bp)
-    app.register_blueprint(pos_bp, url_prefix='/pos')
+    app.register_blueprint(pos_bp, url_prefix="/pos")
     app.register_blueprint(reportes_bp)
     app.register_blueprint(proveedores_bp)
     app.register_blueprint(caja_bp)
 
-    # ── PWA ───────────────────────────────────────
-    @app.route('/sw.js')
+    # ── PWA ────────────────────────────────────────────────────────────
+    @app.route("/sw.js")
     def sw():
-        return send_from_directory(app.static_folder, 'sw.js', mimetype='application/javascript')
+        return send_from_directory(
+            app.static_folder,
+            "sw.js",
+            mimetype="application/javascript"
+        )
 
-    @app.route('/manifest.json')
+    @app.route("/manifest.json")
     def manifest():
-        return send_from_directory(app.static_folder, 'manifest.json', mimetype='application/manifest+json')
+        return send_from_directory(
+            app.static_folder,
+            "manifest.json",
+            mimetype="application/manifest+json"
+        )
 
-    # ── Protección de rutas ───────────────────────
+    # ── Protección de rutas ────────────────────────────────────────────
     @app.before_request
     def require_login():
-        endpoint = request.endpoint or ''
-        libres = {'auth.login', 'auth.logout', 'sw', 'manifest', 'static'}
-        if endpoint not in libres and not endpoint.startswith('static'):
-            if 'user_id' not in session:
-                return redirect(url_for('auth.login'))
+        endpoint = request.endpoint or ""
+        libres = {"auth.login", "auth.logout", "sw", "manifest", "static"}
 
-    # ── Crear tablas + admin ─────────────────────
+        if endpoint not in libres and not endpoint.startswith("static"):
+            if "user_id" not in session:
+                return redirect(url_for("auth.login"))
+
+    # ── Crear tablas + admin por defecto ──────────────────────────────
     with app.app_context():
-        from models import Usuario
         db.create_all()
-        if not Usuario.query.filter_by(username='admin').first():
-            u = Usuario(username='admin', nombre='Administrador', rol='admin')
-            u.set_password('admin123')
+
+        from models import Usuario
+
+        if not Usuario.query.filter_by(username="admin").first():
+            admin_pass = os.environ.get("ADMIN_PASSWORD", "admin123")
+
+            u = Usuario(
+                username="admin",
+                nombre="Administrador",
+                rol="admin"
+            )
+            u.set_password(admin_pass)
+
             db.session.add(u)
             db.session.commit()
-            print('✅ Admin creado: admin / admin123')
+
+            print("✅ Admin creado correctamente")
 
     return app
 
-# ── Instancia de la app ───────────────────────
+
+# ── Render / Producción ────────────────────────────────────────────────
 app = create_app()
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5050))
-    app.run(host='0.0.0.0', port=port, debug=False)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5050))
+    app.run(host="0.0.0.0", port=port, debug=False)
