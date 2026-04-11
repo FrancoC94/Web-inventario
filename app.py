@@ -105,7 +105,6 @@ def create_app():
             u.set_password(admin_pass)
             db.session.add(u)
             db.session.commit()
-            print("✅ Admin creado correctamente")
 
     return app
 
