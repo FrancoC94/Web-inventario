@@ -1,0 +1,2 @@
+def gastos():
+    return None

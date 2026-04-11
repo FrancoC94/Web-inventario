@@ -133,3 +133,24 @@ class Caja(db.Model):
         h = int(diff.total_seconds() // 3600)
         m = int((diff.total_seconds() % 3600) // 60)
         return f'{h}h {m}m'
+
+
+class Gasto(db.Model):
+    __tablename__ = 'gasto'
+    id          = db.Column(db.Integer, primary_key=True)
+    usuario_id  = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    categoria   = db.Column(db.String(50), nullable=False)  # arriendo|luz|agua|internet|salario|transporte|otros
+    descripcion = db.Column(db.String(200), nullable=False)
+    monto       = db.Column(db.Float, nullable=False)
+    fecha       = db.Column(db.DateTime, default=datetime.utcnow)
+    notas       = db.Column(db.Text, default='')
+    usuario     = db.relationship('Usuario', foreign_keys=[usuario_id], lazy=True)
+
+    @property
+    def categoria_icon(self):
+        icons = {
+            'arriendo': '🏠', 'luz': '💡', 'agua': '💧',
+            'internet': '🌐', 'salario': '👤', 'transporte': '🚗',
+            'compras': '🛒', 'otros': '📦'
+        }
+        return icons.get(self.categoria, '📦')

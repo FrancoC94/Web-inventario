@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gastos · DriveFlow PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:.85em;margin-bottom:16px;transition:color .2s}
+        .back-link:hover{color:var(--primary)}
+        .page-title{font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;letter-spacing:2px;margin-bottom:20px}
+        .page-title span{color:var(--danger)}
+        .filtros{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+        .flabel{display:flex;flex-direction:column;gap:5px;font-size:.78em;font-weight:600;color:var(--muted)}
+        select{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:9px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:.88em;transition:border-color .2s}
+        select:focus{border-color:var(--primary)}
+        textarea{background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;width:100%;font-family:inherit;font-size:.9em;resize:vertical;min-height:60px}
+        textarea:focus{border-color:var(--primary)}
+
+        /* Categoría badges */
+        .cat-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.72em;font-weight:700}
+        .cat-arriendo{background:rgba(139,92,246,.15);color:#a78bfa;border:1px solid rgba(139,92,246,.3)}
+        .cat-luz{background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3)}
+        .cat-agua{background:rgba(56,189,248,.15);color:var(--primary);border:1px solid rgba(56,189,248,.3)}
+        .cat-internet{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
+        .cat-salario{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+        .cat-transporte{background:rgba(251,146,60,.15);color:#fb923c;border:1px solid rgba(251,146,60,.3)}
+        .cat-compras{background:rgba(236,72,153,.15);color:#ec4899;border:1px solid rgba(236,72,153,.3)}
+        .cat-otros{background:rgba(148,163,184,.15);color:var(--muted);border:1px solid rgba(148,163,184,.3)}
+
+        /* Resumen financiero */
+        .balance-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:20px}
+        .balance-title{font-family:'Rajdhani',sans-serif;font-size:1.1em;font-weight:700;letter-spacing:1px;margin-bottom:16px}
+        .balance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+        .bstat{background:var(--panel2);border-radius:12px;padding:14px;text-align:center}
+        .bstat small{display:block;font-size:.65em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+        .bstat strong{font-size:1.4em;font-weight:700}
+
+        /* Gráfico por categoría */
+        .cat-bars{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+        .cat-row{display:flex;align-items:center;gap:10px}
+        .cat-label{font-size:.78em;min-width:90px;color:var(--muted)}
+        .cat-bar-wrap{flex:1;background:var(--panel2);border-radius:6px;height:8px;overflow:hidden}
+        .cat-bar{height:100%;border-radius:6px;transition:width .5s ease;background:var(--danger)}
+        .cat-monto{font-size:.78em;font-weight:700;min-width:70px;text-align:right;color:var(--danger)}
+
+        /* Modal */
+        .modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.8);align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+        .modal.open{display:flex}
+        .modal-box{background:var(--panel);padding:28px;border-radius:18px;width:min(460px,92vw);border:1px solid var(--border);box-shadow:0 25px 60px rgba(0,0,0,.6);animation:boxIn .25s ease;max-height:90vh;overflow-y:auto}
+        @keyframes boxIn{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+        .modal-box h3{margin-bottom:20px;font-family:'Rajdhani',sans-serif;font-size:1.2em}
+        .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .modal-btns{display:flex;gap:10px;margin-top:20px}
+        .modal-btns .btn{flex:1}
+
+        /* Ganancia neta */
+        .neta-pos{color:var(--success)}.neta-neg{color:var(--danger)}
+    </style>
+</head>
+<body>
+<nav class="topbar">
+    <div class="topbar-left"><span class="logo-sm">DRIVE<span>FLOW</span></span></div>
+    <div class="topbar-right">
+        <span class="user-info">👤 {{ session.get('user_nombre') }}</span>
+        <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
+        <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        <a href="/" class="btn-logout">← Inventario</a>
+        <a href="/logout" class="btn-logout">Salir →</a>
+    </div>
+</nav>
+
+<div id="toasts"></div>
+
+<div class="container">
+    <a href="/" class="back-link">← Volver al inventario</a>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <div class="page-title">💸 Gastos del <span>Negocio</span></div>
+        <button onclick="document.getElementById('modalGasto').classList.add('open')" class="btn btn-danger">➕ Registrar gasto</button>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flashes">{% for cat,msg in messages %}<div class="flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    <!-- FILTROS -->
+    <form action="/gastos" method="GET">
+        <div class="filtros">
+            <div class="flabel">Año
+                <select name="año" onchange="this.form.submit()">
+                    {% for y in range(2024, 2028) %}
+                    <option value="{{ y }}" {{ 'selected' if y==año }}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flabel">Mes
+                <select name="mes" onchange="this.form.submit()">
+                    {% for m, mn in meses %}
+                    <option value="{{ m }}" {{ 'selected' if m==mes }}>{{ mn }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flabel">Categoría
+                <select name="cat" onchange="this.form.submit()">
+                    <option value="">Todas</option>
+                    {% for c in categorias %}
+                    <option value="{{ c }}" {{ 'selected' if c==cat }}>{{ c.capitalize() }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <a href="/gastos" class="btn btn-outline btn-sm" style="align-self:flex-end">✕ Limpiar</a>
+        </div>
+    </form>
+
+    <!-- RESUMEN FINANCIERO -->
+    <div class="balance-card">
+        <div class="balance-title">📊 Resumen financiero del mes</div>
+        <div class="balance-grid">
+            <div class="bstat">
+                <small>💸 Total gastos</small>
+                <strong style="color:var(--danger)">${{ "{:,.2f}".format(stats.total_gastos) }}</strong>
+            </div>
+            <div class="bstat">
+                <small>🛒 Ventas brutas</small>
+                <strong style="color:var(--primary)">${{ "{:,.2f}".format(stats.total_ventas) }}</strong>
+            </div>
+            <div class="bstat">
+                <small>📈 Ganancia bruta</small>
+                <strong style="color:var(--success)">${{ "{:,.2f}".format(stats.total_ganancia) }}</strong>
+            </div>
+            <div class="bstat">
+                <small>✨ GANANCIA NETA</small>
+                <strong class="{{ 'neta-pos' if stats.ganancia_neta >= 0 else 'neta-neg' }}" style="font-size:1.6em">
+                    {{ '+' if stats.ganancia_neta >= 0 else '' }}${{ "{:,.2f}".format(stats.ganancia_neta) }}
+                </strong>
+            </div>
+        </div>
+
+        <!-- Barras por categoría -->
+        {% if stats.total_gastos > 0 %}
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:.78em;font-weight:600;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Por categoría</div>
+            <div class="cat-bars">
+                {% for c in categorias %}
+                {% if stats.por_categoria[c] > 0 %}
+                <div class="cat-row">
+                    <span class="cat-label">{{ c.capitalize() }}</span>
+                    <div class="cat-bar-wrap">
+                        <div class="cat-bar" style="width:{{ (stats.por_categoria[c] / stats.total_gastos * 100)|round(1) }}%"></div>
+                    </div>
+                    <span class="cat-monto">${{ "{:,.2f}".format(stats.por_categoria[c]) }}</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- GRÁFICO ANUAL -->
+    <div class="card" style="margin-bottom:20px">
+        <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.05em;margin-bottom:16px">📈 Ganancia neta vs Gastos — {{ año }}</div>
+        <canvas id="chartAnual" style="max-height:260px"></canvas>
+    </div>
+
+    <!-- TABLA GASTOS -->
+    <div class="card card-table">
+        {% if gastos %}
+        <table>
+            <thead>
+                <tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Registrado por</th><th>Acción</th></tr>
+            </thead>
+            <tbody>
+            {% for g in gastos %}
+            <tr>
+                <td style="font-size:.8em;color:var(--muted);white-space:nowrap">{{ g.fecha.strftime('%d/%m/%Y') }}</td>
+                <td>
+                    <span class="cat-badge cat-{{ g.categoria }}">{{ g.categoria_icon }} {{ g.categoria.capitalize() }}</span>
+                </td>
+                <td class="td-left">
+                    <b>{{ g.descripcion }}</b>
+                    {% if g.notas %}<div style="font-size:.72em;color:var(--muted)">{{ g.notas }}</div>{% endif %}
+                </td>
+                <td style="color:var(--danger);font-weight:700">-${{ "{:,.2f}".format(g.monto) }}</td>
+                <td style="font-size:.82em;color:var(--muted)">{{ g.usuario.nombre if g.usuario else '—' }}</td>
+                <td>
+                    <a href="/gastos/eliminar/{{ g.id }}" class="btn-link btn-link--danger"
+                       onclick="return confirm('¿Eliminar este gasto?')">🗑️</a>
+                </td>
+            </tr>
+            {% endfor %}
+            <tr style="border-top:2px solid var(--border)">
+                <td colspan="3" style="text-align:right;font-weight:700;padding-right:8px">TOTAL:</td>
+                <td style="color:var(--danger);font-weight:700">-${{ "{:,.2f}".format(gastos|sum(attribute='monto')) }}</td>
+                <td colspan="2"></td>
+            </tr>
+            </tbody>
+        </table>
+        {% else %}
+        <div style="text-align:center;padding:50px;opacity:.35">
+            <div style="font-size:2.5em;margin-bottom:10px">💸</div>
+            <p style="font-size:.88em">No hay gastos registrados para este período.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- MODAL REGISTRAR GASTO -->
+<div class="modal" id="modalGasto">
+    <div class="modal-box" onclick="event.stopPropagation()">
+        <h3>💸 Registrar Gasto</h3>
+        <form method="POST" action="/gastos/crear">
+            <div class="frow" style="margin-bottom:12px">
+                <label class="flabel">Categoría
+                    <select name="categoria" required>
+                        {% for c in categorias %}
+                        <option value="{{ c }}">{{ c.capitalize() }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="flabel">Fecha
+                    <input type="date" name="fecha" value="{{ now }}"
+                        style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:9px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:.88em;width:100%">
+                </label>
+            </div>
+            <label class="flabel" style="margin-bottom:12px">Descripción *
+                <input type="text" name="descripcion" placeholder="Ej: Pago arriendo local" required
+                    style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:.9em;width:100%">
+            </label>
+            <label class="flabel" style="margin-bottom:12px">Monto $ *
+                <input type="number" name="monto" step="0.01" min="0.01" placeholder="0.00" required
+                    style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:12px 14px;border-radius:10px;outline:none;font-family:inherit;font-size:1.2em;font-weight:700;width:100%;text-align:center">
+            </label>
+            <label class="flabel" style="margin-bottom:12px">Notas adicionales
+                <textarea name="notas" placeholder="Opcional..."></textarea>
+            </label>
+            <div class="modal-btns">
+                <button type="submit" class="btn btn-danger">💸 Registrar gasto</button>
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('modalGasto').classList.remove('open')">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.getElementById('modalGasto').classList.remove('open');
+});
+
+// Gráfico anual
+async function cargarChart() {
+    try {
+        const res  = await fetch(`/gastos/api/chart?año={{ año }}`);
+        const data = await res.json();
+        const isDark = document.body.getAttribute('data-theme') !== 'light';
+        const textColor = isDark ? '#94a3b8' : '#64748b';
+        const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+
+        new Chart(document.getElementById('chartAnual'), {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.mes),
+                datasets: [
+                    {
+                        label: 'Gastos',
+                        data: data.map(d => d.gastos),
+                        backgroundColor: 'rgba(239,68,68,.7)',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Ganancia neta',
+                        data: data.map(d => d.neta),
+                        backgroundColor: data.map(d => d.neta >= 0 ? 'rgba(16,185,129,.7)' : 'rgba(239,68,68,.4)'),
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: textColor, font: { family: 'DM Sans' } } }
+                },
+                scales: {
+                    x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                    y: {
+                        ticks: { color: textColor, callback: v => `$${v.toLocaleString()}` },
+                        grid: { color: gridColor }
+                    }
+                }
+            }
+        });
+    } catch(e) { console.error('Chart error:', e); }
+}
+cargarChart();
+</script>
+</body>
+</html>
