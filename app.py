@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 def create_app():
     app = Flask(__name__)
 
@@ -13,32 +12,31 @@ def create_app():
     default_db = 'sqlite:///driveflow.db'
     db_url = os.environ.get('DATABASE_URL', default_db)
 
-    # Corrección para compatibilidad con SQLAlchemy en Render/Supabase
     if db_url.startswith('mysql://'):
         db_url = db_url.replace('mysql://', 'mysql+pymysql://', 1)
     elif db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    app.config['SQLALCHEMY_DATABASE_URI']        = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 280, 'pool_pre_ping': True}
-    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
+    app.config['SQLALCHEMY_ENGINE_OPTIONS']      = {'pool_recycle': 280, 'pool_pre_ping': True}
+    app.config['MAX_CONTENT_LENGTH']             = 5 * 1024 * 1024
     app.secret_key = os.environ.get('SECRET_KEY', 'driveflow-secret-2026')
 
     db.init_app(app)
 
     # ── Blueprints ─────────────────────────────────
-    from routes.auth import auth_bp
-    from routes.inventario import inventario_bp
-    from routes.ventas import ventas_bp
-    from routes.asistente import asistente_bp
-    from routes.usuarios import usuarios_bp
-    from routes.historial import historial_bp
-    from routes.pos import pos_bp
-    from routes.reportes import reportes_bp
+    from routes.auth        import auth_bp
+    from routes.inventario  import inventario_bp
+    from routes.ventas      import ventas_bp
+    from routes.asistente   import asistente_bp
+    from routes.usuarios    import usuarios_bp
+    from routes.historial   import historial_bp
+    from routes.pos         import pos_bp
+    from routes.reportes    import reportes_bp
     from routes.proveedores import proveedores_bp
-    from routes.caja import caja_bp
-    from routes.gastos import gastos_bp
+    from routes.caja        import caja_bp
+    from routes.gastos      import gastos_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(inventario_bp)
@@ -81,10 +79,10 @@ def create_app():
             db.session.commit()
             print('✅ Admin creado: admin / admin123')
 
-    return app  # <-- El return debe estar fuera del bloque with
+    return app
 
 
-# ── Inicialización ────────────────────────────────
+# ── Para Render y local ────────────────────────────
 app = create_app()
 
 if __name__ == '__main__':
