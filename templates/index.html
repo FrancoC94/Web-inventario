@@ -387,6 +387,14 @@
                     ➕ Usar este precio al registrar producto
                 </button>
             </div>
+
+            <!-- SUGERENCIAS AUTOMÁTICAS DE PRECIO -->
+            <div id="sugerencias-box" style="display:none;margin-top:14px">
+                <div style="font-size:.72em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+                    💡 Precios sugeridos
+                </div>
+                <div id="sugerencias-lista" style="display:flex;flex-direction:column;gap:6px"></div>
+            </div>
         </div>
 
         <!-- TAB 2: Calcular costo máximo -->
@@ -518,6 +526,7 @@ function calcMargen() {
     if (costo <= 0) {
         ['r1-venta','r1-ganancia','r1-margenreal'].forEach(id => document.getElementById(id).textContent = id === 'r1-margenreal' ? '0%' : '$0.00');
         document.getElementById('btnUsarPrecio').style.display = 'none';
+        document.getElementById('sugerencias-box').style.display = 'none';
         return;
     }
     const venta    = costo * (1 + margen / 100);
@@ -527,6 +536,41 @@ function calcMargen() {
     document.getElementById('r1-ganancia').textContent   = `$${ganancia.toFixed(2)}`;
     document.getElementById('r1-margenreal').textContent = `${mReal.toFixed(1)}%`;
     document.getElementById('btnUsarPrecio').style.display = 'block';
+
+    // ── Sugerencias automáticas ──────────────────
+    const sugerencias = [
+        { label: '🟡 Conservador',  markup: 20, desc: 'Margen ajustado, muy competitivo' },
+        { label: '🟢 Recomendado',  markup: 35, desc: 'Equilibrio perfecto ganancia/precio' },
+        { label: '🔵 Buena ganancia', markup: 50, desc: 'Rentable sin ser excesivo' },
+        { label: '🟠 Alta rentabilidad', markup: 75, desc: 'Para productos de baja rotación' },
+    ];
+
+    const lista = document.getElementById('sugerencias-lista');
+    lista.innerHTML = sugerencias.map(s => {
+        const pSugerido = costo * (1 + s.markup / 100);
+        const gSugerida = pSugerido - costo;
+        const mSugerido = (gSugerida / pSugerido * 100);
+        const esActual  = Math.abs(margen - s.markup) < 2;
+        return `
+        <div onclick="setMargen(${s.markup})"
+             style="display:flex;justify-content:space-between;align-items:center;
+                    background:${esActual ? 'rgba(56,189,248,.12)' : 'var(--panel2)'};
+                    border:1px solid ${esActual ? 'rgba(56,189,248,.4)' : 'var(--border)'};
+                    border-radius:10px;padding:10px 14px;cursor:pointer;transition:.2s"
+             onmouseover="this.style.borderColor='var(--primary)'"
+             onmouseout="this.style.borderColor='${esActual ? 'rgba(56,189,248,.4)' : 'var(--border)'}'">
+            <div>
+                <div style="font-size:.82em;font-weight:600">${s.label} — ${s.markup}% markup</div>
+                <div style="font-size:.7em;color:var(--muted);margin-top:1px">${s.desc}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;margin-left:12px">
+                <div style="font-size:1em;font-weight:700;color:var(--primary)">$${pSugerido.toFixed(2)}</div>
+                <div style="font-size:.7em;color:var(--success)">+$${gSugerida.toFixed(2)} · ${mSugerido.toFixed(0)}% margen</div>
+            </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('sugerencias-box').style.display = 'block';
 }
 
 function usarPrecio() {
