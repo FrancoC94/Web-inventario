@@ -114,6 +114,8 @@
                 <input type="file" name="archivo_excel" accept=".xlsx,.xls" onchange="this.form.submit()" style="display:none">
             </label>
         </form>
+        <a href="/exportar_inventario" class="btn btn-outline" title="Descargar inventario en Excel">📥 Excel</a>
+        <a href="/inventario_pdf" class="btn btn-outline" title="Descargar inventario en PDF">📄 PDF</a>
         {% endif %}
         <a href="/reportes/ventas_pdf?dias=30" class="btn btn-outline" target="_blank">📄 PDF Ventas</a>
         {% if puede_costos %}

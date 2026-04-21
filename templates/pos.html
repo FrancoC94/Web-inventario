@@ -7,7 +7,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#38bdf8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
+        @media print {
+            body > *:not(.modal-overlay) { display:none!important; }
+            .modal-overlay { position:static!important;background:none!important;display:block!important; }
+            .ticket { box-shadow:none!important;border-radius:0!important;width:100%!important; }
+            .ticket-btns { display:none!important; }
+        }
         :root {
             --bg:#0a0f1e; --panel:#0f172a; --panel2:#1e293b;
             --text:#f1f5f9; --muted:#94a3b8; --border:#1e3a5f;
@@ -153,18 +160,41 @@
             .panel-right { border-left:none; border-top:1px solid var(--border); max-height:45vh; }
             body { overflow:auto; }
         }
+
+        /* OFFLINE */
+        .offline-bar{display:none;background:rgba(245,158,11,.15);border-bottom:1px solid rgba(245,158,11,.3);padding:6px 20px;font-size:.78em;font-weight:600;color:var(--warning);text-align:center;gap:8px;align-items:center;justify-content:center}
+        .offline-bar.show{display:flex}
+        .online-dot{width:8px;height:8px;border-radius:50%;background:var(--success);flex-shrink:0}
+        .offline-dot{width:8px;height:8px;border-radius:50%;background:var(--warning);flex-shrink:0;animation:pulse 1s ease infinite}
+        .status-chip{display:flex;align-items:center;gap:5px;font-size:.72em;font-weight:700;padding:3px 10px;border-radius:20px;cursor:default}
+        .status-online{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
+        .status-offline{background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3)}
+        .pending-badge{background:var(--warning);color:#fff;font-size:.6em;padding:1px 5px;border-radius:8px;margin-left:3px;display:none}
     </style>
 </head>
 <body>
+
+<!-- BARRA OFFLINE -->
+<div class="offline-bar" id="offlineBar">
+    <span class="offline-dot"></span>
+    Sin conexión — Las ventas se guardan localmente y se sincronizarán cuando vuelva internet
+    <span id="pendingCount" style="font-weight:700"></span>
+</div>
 
 <!-- TOPBAR -->
 <nav class="topbar">
     <div class="topbar-left">
         <span class="logo">DRIVE<span>FLOW</span></span>
         <span class="pos-tag">POS</span>
+        <span class="status-chip status-online" id="statusChip">
+            <span class="online-dot" id="statusDot"></span>
+            <span id="statusText">En línea</span>
+            <span class="pending-badge" id="pendingBadge">0</span>
+        </span>
     </div>
     <div class="topbar-right">
         <span class="user-chip">👤 {{ session.get('user_nombre','Usuario') }}</span>
+        <button class="btn-nav" onclick="sincronizarAhora()" id="btnSync" style="display:none;background:var(--warning);color:#fff;border:none">🔄 Sincronizar</button>
         <a href="/" class="btn-nav">← Inventario</a>
         <button class="theme-btn" onclick="toggleTheme()">🌓</button>
     </div>
@@ -295,13 +325,21 @@
         <div style="display:flex;justify-content:space-between;font-size:.85em;font-weight:700;color:#10b981">
             <span>Vuelto</span><span id="ticketVuelto"></span>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:.82em;color:#555;margin-top:4px" id="ticketWsp" style="display:none"></div>
+        <div style="display:flex;justify-content:space-between;font-size:.82em;color:#555;margin-top:4px" id="ticketWsp"></div>
+
+        <!-- QR CODE -->
+        <div style="text-align:center;margin:16px 0 8px;border-top:1px dashed #ddd;padding-top:14px">
+            <div id="qrcode" style="display:inline-block"></div>
+            <div style="font-size:.65em;color:#999;margin-top:6px">Escanea para ver el detalle</div>
+        </div>
+
         <div class="ticket-footer">
             Atendido por: <b id="ticketCajero"></b><br>
             ¡Gracias por su compra!
         </div>
         <div class="ticket-btns">
             <button class="btn-nueva" onclick="nuevaVenta()">🛒 Nueva venta</button>
+            <button class="btn-cerrar" onclick="imprimirTicket()" style="background:#f0fdf4;color:#10b981">🖨️ Imprimir</button>
             <button class="btn-cerrar" onclick="cerrarTicket()">✕ Cerrar</button>
         </div>
     </div>
@@ -555,8 +593,39 @@ function mostrarTicket(data, pago) {
         wspEl.style.display = 'none';
     }
 
+    // ── Generar QR ─────────────────────────────
+    const qrEl = document.getElementById('qrcode');
+    qrEl.innerHTML = '';
+    const qrText = [
+        'DRIVEFLOW PRO',
+        `Fecha: ${new Date().toLocaleString('es')}`,
+        `Cajero: ${data.cajero}`,
+        data.cliente !== 'Cliente general' ? `Cliente: ${data.cliente}` : '',
+        '---',
+        ...data.detalle.map(d => `${d.cantidad}x ${d.nombre}: $${d.subtotal.toFixed(2)}`),
+        '---',
+        `TOTAL: $${data.total.toFixed(2)}`,
+        `Pagado: $${pago.toFixed(2)}`,
+        `Vuelto: $${vuelto.toFixed(2)}`,
+        'Gracias por su compra!'
+    ].filter(Boolean).join('\n');
+
+    new QRCode(qrEl, {
+        text:         qrText,
+        width:        128,
+        height:       128,
+        colorDark:    '#0f172a',
+        colorLight:   '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+    });
+
     document.getElementById('modalTicket').classList.add('show');
+    if (data.offline) toast('📡 Venta guardada offline — se sincronizará al volver la conexión', 'warning');
     if (data.errores && data.errores.length) data.errores.forEach(e => toast(`⚠️ ${e}`, 'danger'));
+}
+
+function imprimirTicket() {
+    window.print();
 }
 
 function nuevaVenta() {
@@ -586,6 +655,133 @@ async function cargarStatsHoy() {
 
 cargarStatsHoy();
 setInterval(cargarStatsHoy, 30000);
+
+// ── MODO OFFLINE ────────────────────────────────
+const OFFLINE_DB_NAME = 'driveflow-offline';
+
+function abrirOfflineDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(OFFLINE_DB_NAME, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore('ventas', { keyPath: 'id', autoIncrement: true });
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = reject;
+    });
+}
+
+async function contarPendientes() {
+    try {
+        const db  = await abrirOfflineDB();
+        const tx  = db.transaction('ventas', 'readonly');
+        const req = tx.objectStore('ventas').count();
+        return await new Promise(r => { req.onsuccess = () => r(req.result); req.onerror = () => r(0); });
+    } catch { return 0; }
+}
+
+async function actualizarEstadoConexion() {
+    const online    = navigator.onLine;
+    const pending   = await contarPendientes();
+    const chip      = document.getElementById('statusChip');
+    const dot       = document.getElementById('statusDot');
+    const txt       = document.getElementById('statusText');
+    const badge     = document.getElementById('pendingBadge');
+    const bar       = document.getElementById('offlineBar');
+    const btnSync   = document.getElementById('btnSync');
+    const pendCount = document.getElementById('pendingCount');
+
+    if (online) {
+        chip.className  = 'status-chip status-online';
+        dot.className   = 'online-dot';
+        txt.textContent = 'En línea';
+        bar.classList.remove('show');
+        btnSync.style.display = pending > 0 ? 'flex' : 'none';
+    } else {
+        chip.className  = 'status-chip status-offline';
+        dot.className   = 'offline-dot';
+        txt.textContent = 'Sin conexión';
+        bar.classList.add('show');
+        btnSync.style.display = 'none';
+    }
+
+    if (pending > 0) {
+        badge.style.display = 'inline';
+        badge.textContent   = pending;
+        pendCount.textContent = `(${pending} venta${pending > 1 ? 's' : ''} pendiente${pending > 1 ? 's' : ''})`;
+    } else {
+        badge.style.display = 'none';
+        pendCount.textContent = '';
+    }
+}
+
+async function sincronizarAhora() {
+    const btn = document.getElementById('btnSync');
+    btn.textContent = '⏳ Sincronizando...';
+    btn.disabled    = true;
+
+    try {
+        const db     = await abrirOfflineDB();
+        const tx     = db.transaction('ventas', 'readonly');
+        const ventas = await new Promise(r => {
+            const all = []; const cursor = tx.objectStore('ventas').openCursor();
+            cursor.onsuccess = e => {
+                if (e.target.result) { all.push({id: e.target.result.key, ...e.target.result.value}); e.target.result.continue(); }
+                else r(all);
+            };
+        });
+
+        let ok = 0;
+        for (const v of ventas) {
+            try {
+                const { id, timestamp, ...datos } = v;
+                const res = await fetch('/pos/vender', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify(datos)
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    const tx2 = db.transaction('ventas', 'readwrite');
+                    tx2.objectStore('ventas').delete(id);
+                    ok++;
+                }
+            } catch {}
+        }
+
+        if (ok > 0) toast(`✅ ${ok} venta${ok>1?'s':''} sincronizada${ok>1?'s':''}`, 'success');
+        else toast('⚠️ No se pudo sincronizar. Intenta más tarde.', 'warning');
+    } catch(e) {
+        toast('❌ Error al sincronizar.', 'danger');
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = '🔄 Sincronizar';
+        actualizarEstadoConexion();
+        cargarStatsHoy();
+    }
+}
+
+// Escuchar cambios de conexión
+window.addEventListener('online',  () => { actualizarEstadoConexion(); sincronizarAhora(); });
+window.addEventListener('offline', () => actualizarEstadoConexion());
+
+// Escuchar mensajes del SW
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', e => {
+        if (e.data.type === 'SYNC_DONE' && e.data.count > 0) {
+            toast(`✅ ${e.data.count} venta${e.data.count>1?'s':''} sincronizada${e.data.count>1?'s':''}`, 'success');
+            actualizarEstadoConexion();
+            cargarStatsHoy();
+        }
+    });
+    navigator.serviceWorker.register('/static/sw.js');
+}
+
+// Mostrar mensaje especial si la venta fue offline
+const _procesarOriginal = procesarVenta;
+// Override para mostrar aviso offline en ticket
+const _mostrarOriginal = mostrarTicket;
+
+// Estado inicial
+actualizarEstadoConexion();
+setInterval(actualizarEstadoConexion, 10000);
 </script>
 </body>
 </html>
