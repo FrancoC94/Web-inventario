@@ -97,9 +97,10 @@
 
         .resumen-title { font-family:'Rajdhani',sans-serif; font-size:1.1em; font-weight:700; letter-spacing:1px; padding-bottom:12px; border-bottom:1px solid var(--border); }
 
-        .resumen-linea { display:flex; justify-content:space-between; font-size:.88em; color:var(--muted); margin-bottom:8px; }
-        .resumen-linea.total { font-size:1.4em; font-weight:700; color:var(--text); border-top:1px solid var(--border); padding-top:12px; margin-top:4px; }
-        .resumen-linea.total span:last-child { color:var(--primary); }
+        .resumen-linea { display:flex; justify-content:space-between; align-items:center; font-size:.88em; color:var(--muted); margin-bottom:8px; gap:8px; }
+        .resumen-linea.total { font-size:1.3em; font-weight:700; color:var(--text); border-top:1px solid var(--border); padding-top:12px; margin-top:4px; flex-wrap:wrap; }
+        .resumen-linea.total span:last-child { color:var(--primary); font-size:1.1em; white-space:nowrap; }
+        .resumen-linea span:last-child { white-space:nowrap; }
 
         /* Pago */
         .pago-section label { font-size:.75em; font-weight:600; color:var(--muted); display:block; margin-bottom:6px; letter-spacing:.5px; text-transform:uppercase; }
@@ -222,8 +223,10 @@
                    style="width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:11px 16px 11px 44px;border-radius:12px;font-family:inherit;font-size:.92em;outline:none;transition:border-color .2s,box-shadow .2s"
                    placeholder="Nombre del cliente (opcional)"
                    autocomplete="off"
+                   oninput="buscarClienteCRM(this.value)"
                    onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(56,189,248,.12)'"
-                   onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+                   onblur="setTimeout(()=>document.getElementById('crmSugg').style.display='none',200)">
+            <div id="crmSugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;z-index:50;margin-top:4px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.3)"></div>
         </div>
 
         <!-- WhatsApp opcional -->
@@ -258,8 +261,11 @@
 
         <div class="resumen-title">📋 RESUMEN DE VENTA</div>
 
-        <!-- Líneas resumen -->
-        <div>
+        <!-- Líneas por producto -->
+        <div id="resumenItems" style="display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto"></div>
+
+        <!-- Totales -->
+        <div style="border-top:1px solid var(--border);padding-top:10px">
             <div class="resumen-linea"><span>Productos</span><span id="resumenCant">0 items</span></div>
             <div class="resumen-linea"><span>Subtotal</span><span id="resumenSub">$0.00</span></div>
             <div class="resumen-linea total"><span>TOTAL</span><span id="resumenTotal">$0.00</span></div>
@@ -503,7 +509,22 @@ function actualizarResumen() {
     const cant  = carrito.reduce((s,i) => s+i.cantidad, 0);
     const total = carrito.reduce((s,i) => s+i.precio*i.cantidad, 0);
 
-    document.getElementById('resumenCant').textContent  = `${cant} items`;
+    // Mostrar cada producto con su subtotal
+    const resItems = document.getElementById('resumenItems');
+    if (carrito.length) {
+        resItems.innerHTML = carrito.map(i =>
+            `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.78em;color:var(--muted);padding:3px 0;border-bottom:0.5px solid var(--border)">
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">${i.cantidad}× ${i.nombre}</span>
+                <span style="color:var(--text);font-weight:600;white-space:nowrap">$${(i.precio*i.cantidad).toFixed(2)}</span>
+            </div>`
+        ).join('');
+        resItems.style.display = 'flex';
+    } else {
+        resItems.innerHTML = '';
+        resItems.style.display = 'none';
+    }
+
+    document.getElementById('resumenCant').textContent  = `${cant} item${cant !== 1 ? 's' : ''}`;
     document.getElementById('resumenSub').textContent   = `$${total.toFixed(2)}`;
     document.getElementById('resumenTotal').textContent = `$${total.toFixed(2)}`;
 
@@ -643,7 +664,35 @@ function cerrarTicket() {
     document.getElementById('btnCobrar').textContent = '✅ COBRAR';
 }
 
-// ── Stats del día ───────────────────────────────
+// ── Autocomplete clientes CRM ───────────────────
+async function buscarClienteCRM(q) {
+    const sugg = document.getElementById('crmSugg');
+    if (q.length < 2) { sugg.style.display = 'none'; return; }
+    try {
+        const res  = await fetch(`/clientes/api/buscar?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (!data.length) { sugg.style.display = 'none'; return; }
+        sugg.innerHTML = data.map(c =>
+            `<div onclick="selClienteCRM('${c.nombre}','${c.whatsapp||''}')"
+                  style="padding:10px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid var(--border);transition:.15s"
+                  onmouseover="this.style.background='var(--panel2)'" onmouseout="this.style.background=''"  >
+                <div>
+                    <div style="font-weight:600;font-size:.88em">👤 ${c.nombre}</div>
+                    <div style="font-size:.72em;color:var(--muted)">${c.compras} compras · $${c.gastado.toFixed(0)} gastado</div>
+                </div>
+                ${c.whatsapp ? `<span style="font-size:.72em;color:#25d366">📱 ${c.whatsapp}</span>` : ''}
+            </div>`
+        ).join('');
+        sugg.style.display = 'block';
+    } catch { sugg.style.display = 'none'; }
+}
+
+function selClienteCRM(nombre, wsp) {
+    document.getElementById('clienteInput').value  = nombre;
+    document.getElementById('whatsappInput').value = wsp;
+    document.getElementById('crmSugg').style.display = 'none';
+    document.getElementById('clienteInput').style.borderColor = 'var(--success)';
+}
 async function cargarStatsHoy() {
     try {
         const res  = await fetch('/pos/ventas_hoy');

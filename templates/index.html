@@ -39,7 +39,6 @@
         <button class="btn-alerta" onclick="toggleCalc()" title="Calculadora de precios">🧮</button>
         {% if session.get('user_rol') == 'admin' %}
         <a href="/usuarios" class="btn-alerta" style="text-decoration:none">👥 Usuarios</a>
-        <a href="/backup" class="btn-alerta" style="text-decoration:none" title="Backup de base de datos">💾 Backup</a>
         {% endif %}
         <button class="btn-alerta" onclick="toggleAlertas()" id="btnAlerta">
             🔔 <span class="badge-count" id="badgeCount" style="display:none">0</span>
