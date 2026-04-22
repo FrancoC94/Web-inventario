@@ -41,10 +41,13 @@
         .theme-btn { background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:.82em; font-family:inherit; }
 
         /* LAYOUT PRINCIPAL */
-        .pos-layout { display:grid; grid-template-columns:1fr 380px; flex:1; overflow:hidden; gap:0; }
+        .pos-layout { display:grid; grid-template-columns:460px 1fr; flex:1; overflow:hidden; gap:0; }
 
-        /* PANEL IZQUIERDO — Buscador + Carrito */
-        .panel-left { display:flex; flex-direction:column; padding:16px; gap:12px; overflow:hidden; }
+        /* PANEL IZQUIERDO — Cobro (grande) */
+        .panel-left { display:flex; flex-direction:column; padding:24px; gap:14px; overflow-y:auto; background:var(--panel); border-right:1px solid var(--border); }
+
+        /* PANEL DERECHO — Buscador + Carrito */
+        .panel-right { background:var(--panel2); display:flex; flex-direction:column; padding:16px; gap:12px; overflow:hidden; }
 
         /* BUSCADOR */
         .search-wrap { position:relative; }
@@ -156,9 +159,9 @@
         @keyframes tIn  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes tOut { to{opacity:0;transform:translateY(10px)} }
 
-        @media(max-width:700px) {
-            .pos-layout { grid-template-columns:1fr; grid-template-rows:1fr auto; }
-            .panel-right { border-left:none; border-top:1px solid var(--border); max-height:45vh; }
+        @media(max-width:900px) {
+            .pos-layout { grid-template-columns:1fr; grid-template-rows:auto 1fr; }
+            .panel-left { border-right:none; border-bottom:1px solid var(--border); }
             body { overflow:auto; }
         }
 
@@ -204,23 +207,16 @@
 <!-- LAYOUT -->
 <div class="pos-layout">
 
-    <!-- IZQUIERDA: Buscador + Carrito -->
+    <!-- IZQUIERDA: Resumen + Pago (GRANDE) -->
     <div class="panel-left">
 
-        <!-- Buscador -->
-        <div class="search-wrap">
-            <span class="search-icon">🔍</span>
-            <input type="text" class="search-input" id="searchInput"
-                   placeholder="Buscar repuesto por nombre..."
-                   autocomplete="off" autofocus>
-            <div class="search-results" id="searchResults"></div>
-        </div>
+        <div class="resumen-title" style="font-size:1.3em;letter-spacing:2px">📋 COBRO</div>
 
-        <!-- Cliente opcional -->
+        <!-- Cliente -->
         <div style="position:relative">
-            <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.45;pointer-events:none">👤</span>
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none;font-size:1em">👤</span>
             <input type="text" id="clienteInput"
-                   style="width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:11px 16px 11px 44px;border-radius:12px;font-family:inherit;font-size:.92em;outline:none;transition:border-color .2s,box-shadow .2s"
+                   style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:12px 16px 12px 42px;border-radius:12px;font-family:inherit;font-size:.95em;outline:none;transition:.2s"
                    placeholder="Nombre del cliente (opcional)"
                    autocomplete="off"
                    oninput="buscarClienteCRM(this.value)"
@@ -229,15 +225,76 @@
             <div id="crmSugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;z-index:50;margin-top:4px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.3)"></div>
         </div>
 
-        <!-- WhatsApp opcional -->
+        <!-- WhatsApp -->
         <div style="position:relative">
-            <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.45;pointer-events:none">📱</span>
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none">📱</span>
             <input type="tel" id="whatsappInput"
-                   style="width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:11px 16px 11px 44px;border-radius:12px;font-family:inherit;font-size:.92em;outline:none;transition:border-color .2s,box-shadow .2s"
-                   placeholder="WhatsApp cliente ej: +593999999999 (opcional)"
+                   style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:12px 16px 12px 42px;border-radius:12px;font-family:inherit;font-size:.95em;outline:none;transition:.2s"
+                   placeholder="WhatsApp (opcional)"
                    autocomplete="off"
                    onfocus="this.style.borderColor='#25d366';this.style.boxShadow='0 0 0 3px rgba(37,211,102,.12)'"
                    onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        </div>
+
+        <!-- Productos en la venta -->
+        <div id="resumenItems" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;background:var(--panel2);border-radius:12px;padding:10px;border:1px solid var(--border)"></div>
+
+        <!-- Totales -->
+        <div style="background:var(--panel2);border-radius:14px;padding:16px;border:1px solid var(--border)">
+            <div class="resumen-linea"><span>Productos</span><span id="resumenCant">0 items</span></div>
+            <div class="resumen-linea"><span>Subtotal</span><span id="resumenSub">$0.00</span></div>
+            <div class="resumen-linea total" style="font-size:1.8em;margin-top:10px">
+                <span>TOTAL</span>
+                <span id="resumenTotal" style="color:var(--primary);font-size:1em">$0.00</span>
+            </div>
+        </div>
+
+        <!-- Monto recibido -->
+        <div class="pago-section">
+            <label style="font-size:.8em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">💵 Monto recibido</label>
+            <input type="number" class="pago-input" id="pagoInput"
+                   placeholder="0.00" step="0.01" min="0"
+                   style="font-size:1.6em;padding:16px;text-align:center"
+                   oninput="calcVuelto()">
+            <div class="pagos-rapidos" id="pagosRapidos" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Vuelto -->
+        <div class="vuelto-box" style="padding:16px 20px">
+            <span class="label" style="font-size:.85em">Vuelto / Cambio</span>
+            <span class="valor" id="vueltoValor" style="font-size:2em">$0.00</span>
+        </div>
+
+        <!-- Botón cobrar -->
+        <button class="btn-cobrar" id="btnCobrar" onclick="procesarVenta()" disabled
+                style="font-size:1.3em;padding:20px;letter-spacing:1px">
+            ✅ COBRAR
+        </button>
+
+        <!-- Stats del día -->
+        <div class="stats-hoy">
+            <div class="stat-mini">
+                <small>Transacciones hoy</small>
+                <strong id="statCant" style="color:var(--primary);font-size:1.5em">0</strong>
+            </div>
+            <div class="stat-mini">
+                <small>Total vendido hoy</small>
+                <strong id="statTotal" style="color:var(--success);font-size:1.5em">$0</strong>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DERECHA: Buscador + Carrito -->
+    <div class="panel-right">
+
+        <!-- Buscador -->
+        <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="searchInput"
+                   placeholder="Buscar repuesto por nombre..."
+                   autocomplete="off" autofocus>
+            <div class="search-results" id="searchResults"></div>
         </div>
 
         <!-- Carrito header -->
@@ -251,60 +308,6 @@
             <div class="carrito-empty" id="carritoEmpty">
                 <div>🛒</div>
                 <p>Busca un producto para agregar</p>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- DERECHA: Resumen + Pago -->
-    <div class="panel-right">
-
-        <div class="resumen-title">📋 RESUMEN DE VENTA</div>
-
-        <!-- Líneas por producto -->
-        <div id="resumenItems" style="display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto"></div>
-
-        <!-- Totales -->
-        <div style="border-top:1px solid var(--border);padding-top:10px">
-            <div class="resumen-linea"><span>Productos</span><span id="resumenCant">0 items</span></div>
-            <div class="resumen-linea"><span>Subtotal</span><span id="resumenSub">$0.00</span></div>
-            <div class="resumen-linea total"><span>TOTAL</span><span id="resumenTotal">$0.00</span></div>
-        </div>
-
-        <!-- Pago recibido -->
-        <div class="pago-section">
-            <label>Monto recibido</label>
-            <input type="number" class="pago-input" id="pagoInput"
-                   placeholder="0.00" step="0.01" min="0"
-                   oninput="calcVuelto()">
-            <div class="pagos-rapidos" id="pagosRapidos" style="margin-top:10px"></div>
-        </div>
-
-        <!-- Vuelto -->
-        <div class="vuelto-box">
-            <span class="label">Vuelto / Cambio</span>
-            <span class="valor" id="vueltoValor">$0.00</span>
-        </div>
-
-        <!-- Botón cobrar -->
-        <button class="btn-cobrar" id="btnCobrar" onclick="procesarVenta()" disabled>
-            ✅ COBRAR
-        </button>
-
-        <!-- Stats del día -->
-        <div>
-            <div style="font-size:.72em;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
-                📊 Mi turno de hoy
-            </div>
-            <div class="stats-hoy">
-                <div class="stat-mini">
-                    <small>Transacciones</small>
-                    <strong id="statCant" style="color:var(--primary)">0</strong>
-                </div>
-                <div class="stat-mini">
-                    <small>Total vendido</small>
-                    <strong id="statTotal" style="color:var(--success)">$0</strong>
-                </div>
             </div>
         </div>
 
