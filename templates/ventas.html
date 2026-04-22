@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ventas · DriveFlow PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .back-link{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:.85em;margin-bottom:16px;transition:color .2s}
+        .back-link:hover{color:var(--primary)}
+        .page-title{font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;letter-spacing:2px;margin-bottom:20px}
+        .page-title span{color:var(--success)}
+        .filtros{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+        .flabel{display:flex;flex-direction:column;gap:4px;font-size:.76em;font-weight:600;color:var(--muted)}
+        .pag{display:flex;justify-content:center;gap:6px;padding:16px}
+    </style>
+</head>
+<body>
+<nav class="topbar">
+    <div class="topbar-left"><span class="logo-sm">DRIVE<span>FLOW</span></span></div>
+    <div class="topbar-right">
+        <span class="user-info">👤 {{ session.get('user_nombre') }}</span>
+        <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
+        <a href="/reportes/ventas_pdf?dias=30" target="_blank" class="btn-alerta" style="text-decoration:none">📄 PDF</a>
+        <button class="theme-btn" onclick="toggleTheme()">🌓</button>
+        <a href="/" class="btn-logout">← Inventario</a>
+        <a href="/logout" class="btn-logout">Salir →</a>
+    </div>
+</nav>
+<div id="toasts"></div>
+<div class="container">
+    <a href="/" class="back-link">← Volver al inventario</a>
+    <div class="page-title">💰 Registro de <span>Ventas</span></div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="flashes">{% for cat,msg in messages %}<div class="flash flash-{{ cat }}">{{ msg }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+
+    <!-- Stats -->
+    <div class="kpis" style="margin-bottom:20px">
+        <div class="kpi kpi-green">
+            <small>💰 VENTAS HOY</small>
+            <strong style="color:var(--success)">${{ "{:,.2f}".format(total_hoy) }}</strong>
+        </div>
+        <div class="kpi kpi-blue">
+            <small>📈 GANANCIA HOY</small>
+            <strong style="color:var(--primary)">${{ "{:,.2f}".format(gan_hoy) }}</strong>
+        </div>
+        <div class="kpi kpi-green">
+            <small>💰 VENTAS PERÍODO</small>
+            <strong style="color:var(--success)">${{ "{:,.2f}".format(total_ventas) }}</strong>
+        </div>
+        <div class="kpi kpi-blue">
+            <small>📈 GANANCIA PERÍODO</small>
+            <strong style="color:var(--primary)">${{ "{:,.2f}".format(total_gan) }}</strong>
+        </div>
+        <div class="kpi kpi-yellow">
+            <small>🛒 TOTAL REGISTROS</small>
+            <strong>{{ total_registros }}</strong>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <form action="/ventas" method="GET">
+        <div class="filtros">
+            <label class="flabel">Desde
+                <input type="date" name="desde" value="{{ desde }}"
+                    style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:8px;outline:none;font-family:inherit">
+            </label>
+            <label class="flabel">Hasta
+                <input type="date" name="hasta" value="{{ hasta }}"
+                    style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:8px;outline:none;font-family:inherit">
+            </label>
+            <label class="flabel">Cliente
+                <input type="text" name="cliente" value="{{ cliente }}" placeholder="Buscar por cliente..."
+                    style="background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:8px;outline:none;font-family:inherit">
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm" style="align-self:flex-end">🔍 Filtrar</button>
+            <a href="/ventas" class="btn btn-outline btn-sm" style="align-self:flex-end">✕ Limpiar</a>
+        </div>
+    </form>
+
+    <!-- Tabla -->
+    <div class="card card-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha y hora</th>
+                    <th>Producto</th>
+                    <th>Cliente</th>
+                    <th>WhatsApp</th>
+                    <th>Cant.</th>
+                    <th>Total</th>
+                    <th>Ganancia</th>
+                    <th>Vendedor</th>
+                    {% if session.get('user_rol') in ('admin','supervisor') %}
+                    <th>Acción</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for v in ventas %}
+            <tr>
+                <td style="font-size:.8em;color:var(--muted);white-space:nowrap">
+                    {{ v.fecha.strftime('%d/%m/%Y') }}<br>
+                    <span style="opacity:.6">{{ v.fecha.strftime('%H:%M') }}</span>
+                </td>
+                <td class="td-left"><b>{{ v.repuesto.nombre if v.repuesto else '—' }}</b></td>
+                <td style="font-size:.82em">
+                    {% if v.cliente_nombre %}
+                    <span style="color:var(--text)">{{ v.cliente_nombre }}</span>
+                    {% else %}
+                    <span style="color:var(--muted)">—</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:.78em">
+                    {% if v.cliente_whatsapp %}
+                    <a href="https://wa.me/{{ v.cliente_whatsapp|replace('+','') }}" target="_blank"
+                       style="color:#25d366;text-decoration:none">💬 {{ v.cliente_whatsapp }}</a>
+                    {% else %}—{% endif %}
+                </td>
+                <td style="text-align:center">{{ v.cantidad }}</td>
+                <td style="color:var(--success);font-weight:700">+${{ "{:,.2f}".format(v.total_venta) }}</td>
+                <td style="color:var(--primary);font-size:.88em">
+                    {% if session.get('user_rol') in ('admin','supervisor') %}
+                    +${{ "{:,.2f}".format(v.ganancia_operacion) }}
+                    {% else %}—{% endif %}
+                </td>
+                <td style="font-size:.8em;color:var(--muted)">{{ v.usuario.nombre if v.usuario else '—' }}</td>
+                {% if session.get('user_rol') in ('admin','supervisor') %}
+                <td>
+                    <a href="/eliminar_venta/{{ v.id }}" class="btn btn-outline btn-sm btn-red"
+                       onclick="return confirm('¿Anular esta venta? El stock será restaurado.')">❌ Anular</a>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr><td colspan="9" class="empty">No hay ventas en este período.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Paginación -->
+        {% if total_pags > 1 %}
+        <div class="pag">
+            {% if page > 1 %}
+            <a href="?page={{ page-1 }}&desde={{ desde }}&hasta={{ hasta }}&cliente={{ cliente }}" class="btn btn-outline btn-sm">← Anterior</a>
+            {% endif %}
+            <span style="font-size:.82em;color:var(--muted);align-self:center">Página {{ page }} de {{ total_pags }}</span>
+            {% if page < total_pags %}
+            <a href="?page={{ page+1 }}&desde={{ desde }}&hasta={{ hasta }}&cliente={{ cliente }}" class="btn btn-outline btn-sm">Siguiente →</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

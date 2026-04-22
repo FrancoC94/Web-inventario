@@ -44,8 +44,7 @@ def inicio():
     busqueda   = request.args.get('buscar','').upper().strip()
     inventario = (Repuesto.query.filter(func.upper(Repuesto.nombre).contains(busqueda)).all()
                   if busqueda else Repuesto.query.all())
-    ventas = Venta.query.order_by(Venta.fecha.desc()).limit(15).all()
-    return render_template('index.html', inventario=inventario, ventas=ventas, **_stats())
+    return render_template('index.html', inventario=inventario, **_stats())
 
 @inventario_bp.route('/agregar', methods=['POST'])
 def agregar():

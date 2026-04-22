@@ -29,13 +29,17 @@
         <a href="/perfil" class="user-info" style="text-decoration:none;cursor:pointer">👤 {{ session.get('user_nombre','Usuario') }}</a>
         <span class="rol-badge rol-{{ session.get('user_rol','vendedor') }}">{{ session.get('user_rol','vendedor').upper() }}</span>
         <a href="/pos" class="btn-alerta" style="text-decoration:none">🛒 POS</a>
+        <a href="/ventas" class="btn-alerta" style="text-decoration:none">💰 Ventas</a>
         <a href="/caja" class="btn-alerta" style="text-decoration:none">💵 Caja</a>
         <a href="/gastos" class="btn-alerta" style="text-decoration:none">💸 Gastos</a>
+        <a href="/clientes" class="btn-alerta" style="text-decoration:none">👥 Clientes</a>
+        <a href="/devoluciones" class="btn-alerta" style="text-decoration:none">↩️ Devoluciones</a>
         <a href="/historial" class="btn-alerta" style="text-decoration:none">📋 Historial</a>
         <a href="/proveedores" class="btn-alerta" style="text-decoration:none">🚚 Proveedores</a>
         <button class="btn-alerta" onclick="toggleCalc()" title="Calculadora de precios">🧮</button>
         {% if session.get('user_rol') == 'admin' %}
         <a href="/usuarios" class="btn-alerta" style="text-decoration:none">👥 Usuarios</a>
+        <a href="/backup" class="btn-alerta" style="text-decoration:none" title="Backup de base de datos">💾 Backup</a>
         {% endif %}
         <button class="btn-alerta" onclick="toggleAlertas()" id="btnAlerta">
             🔔 <span class="badge-count" id="badgeCount" style="display:none">0</span>
@@ -202,28 +206,7 @@
         </table>
     </div>
 
-    <!-- ÚLTIMOS MOVIMIENTOS -->
-    <h3 class="sec-title">📝 Últimos Movimientos</h3>
-    <div class="card card-table">
-        <table>
-            <thead>
-                <tr><th>Hora</th><th>Repuesto</th><th>Cant.</th><th>Total</th><th>Acción</th></tr>
-            </thead>
-            <tbody>
-            {% for v in ventas %}
-            <tr>
-                <td>{{ v.fecha.strftime('%d/%m %H:%M') }}</td>
-                <td>{{ v.repuesto.nombre }}</td>
-                <td>{{ v.cantidad }}</td>
-                <td style="color:var(--success);font-weight:700">+${{ "{:,.2f}".format(v.total_venta) }}</td>
-                <td><a href="/eliminar_venta/{{ v.id }}" class="link-danger" onclick="return confirm('¿Anular venta?')">❌ Anular</a></td>
-            </tr>
-            {% else %}
-            <tr><td colspan="5" class="empty">Sin movimientos hoy.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <!-- FIN INVENTARIO -->
 
 </div>
 
