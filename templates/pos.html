@@ -10,180 +10,179 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         @media print {
-            body > *:not(.modal-overlay) { display:none!important; }
-            .modal-overlay { position:static!important;background:none!important;display:block!important; }
-            .ticket { box-shadow:none!important;border-radius:0!important;width:100%!important; }
-            .ticket-btns { display:none!important; }
+            body > *:not(.modal-overlay){display:none!important}
+            .modal-overlay{position:static!important;background:none!important;display:block!important}
+            .ticket{box-shadow:none!important;border-radius:0!important;width:100%!important}
+            .ticket-btns{display:none!important}
         }
-        :root {
-            --bg:#0a0f1e; --panel:#0f172a; --panel2:#1e293b;
-            --text:#f1f5f9; --muted:#94a3b8; --border:#1e3a5f;
-            --primary:#38bdf8; --success:#10b981; --danger:#ef4444; --warning:#f59e0b;
+        :root{
+            --bg:#0a0f1e;--panel:#0f172a;--panel2:#1e293b;
+            --text:#f1f5f9;--muted:#94a3b8;--border:#1e3a5f;
+            --primary:#38bdf8;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;
             --t:.2s ease;
         }
-        [data-theme="light"] {
-            --bg:#f0f4f8; --panel:#fff; --panel2:#f8fafc;
-            --text:#1e293b; --muted:#64748b; --border:#e2e8f0;
+        [data-theme="light"]{
+            --bg:#f0f4f8;--panel:#fff;--panel2:#f8fafc;
+            --text:#1e293b;--muted:#64748b;--border:#e2e8f0;
         }
-        *,*::before,*::after { box-sizing:border-box; margin:0; }
-        body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; transition:background var(--t),color var(--t); }
+        *,*::before,*::after{box-sizing:border-box;margin:0}
+        body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;transition:background var(--t),color var(--t)}
 
         /* TOPBAR */
-        .topbar { display:flex; justify-content:space-between; align-items:center; padding:10px 24px; background:var(--panel); border-bottom:1px solid var(--border); flex-shrink:0; }
-        .topbar-left { display:flex; align-items:center; gap:16px; }
-        .logo { font-family:'Rajdhani',sans-serif; font-size:1.4em; font-weight:700; letter-spacing:2px; }
-        .logo span { color:var(--primary); }
-        .pos-tag { background:linear-gradient(135deg,rgba(56,189,248,.2),rgba(16,185,129,.2)); color:var(--primary); border:1px solid rgba(56,189,248,.4); font-size:.68em; font-weight:700; padding:3px 12px; border-radius:20px; letter-spacing:1px; animation:glow 2s ease infinite; }
-        @keyframes glow { 0%,100%{box-shadow:0 0 0 rgba(56,189,248,0)} 50%{box-shadow:0 0 12px rgba(56,189,248,.3)} }
-        .topbar-right { display:flex; align-items:center; gap:10px; }
-        .user-chip { font-size:.82em; color:var(--muted); background:var(--panel2); padding:5px 12px; border-radius:20px; border:1px solid var(--border); }
-        .btn-nav { background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:7px 16px; border-radius:10px; text-decoration:none; font-size:.82em; font-weight:600; transition:all .2s; }
-        .btn-nav:hover { border-color:var(--primary); color:var(--primary); transform:translateY(-1px); }
-        .theme-btn { background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:7px 12px; border-radius:10px; cursor:pointer; font-size:.9em; font-family:inherit; transition:all .2s; }
-        .theme-btn:hover { transform:rotate(20deg); border-color:var(--primary); }
+        .topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0}
+        .topbar-left{display:flex;align-items:center;gap:14px}
+        .logo{font-family:'Rajdhani',sans-serif;font-size:1.3em;font-weight:700;letter-spacing:2px}
+        .logo span{color:var(--primary)}
+        .pos-tag{background:rgba(56,189,248,.15);color:var(--primary);border:1px solid rgba(56,189,248,.3);font-size:.68em;font-weight:700;padding:2px 10px;border-radius:20px;letter-spacing:.5px;animation:glow 2s ease infinite}
+        @keyframes glow{0%,100%{box-shadow:0 0 0 rgba(56,189,248,0)}50%{box-shadow:0 0 12px rgba(56,189,248,.35)}}
+        .topbar-right{display:flex;align-items:center;gap:12px}
+        .user-chip{font-size:.82em;color:var(--muted)}
+        .btn-nav{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;text-decoration:none;font-size:.82em;font-weight:600;transition:all .2s}
+        .btn-nav:hover{border-color:var(--primary);color:var(--primary);transform:translateY(-1px)}
+        .theme-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:.82em;font-family:inherit;transition:all .2s}
+        .theme-btn:hover{transform:rotate(20deg);border-color:var(--primary)}
 
-        /* LAYOUT PRINCIPAL */
-        .pos-layout { display:grid; grid-template-columns:480px 1fr; flex:1; overflow:hidden; gap:0; }
+        /* LAYOUT */
+        .pos-layout{display:grid;grid-template-columns:1fr 360px;flex:1;overflow:hidden;gap:0}
 
-        /* PANEL IZQUIERDO — Cobro */
-        .panel-left { display:flex; flex-direction:column; padding:24px; gap:14px; overflow-y:auto; background:var(--panel); border-right:1px solid var(--border); }
-
-        /* PANEL DERECHO — Buscador + Carrito */
-        .panel-right { background:var(--panel2); display:flex; flex-direction:column; padding:18px; gap:12px; overflow:hidden; }
+        /* PANEL IZQUIERDO — Buscador + Carrito */
+        .panel-left{display:flex;flex-direction:column;padding:16px;gap:12px;overflow:hidden}
 
         /* BUSCADOR */
-        .search-wrap { position:relative; }
-        .search-input { width:100%; background:var(--panel); border:2px solid var(--border); color:var(--text); padding:15px 20px 15px 50px; border-radius:16px; font-family:inherit; font-size:1.05em; outline:none; transition:all .25s; }
-        .search-input:focus { border-color:var(--primary); box-shadow:0 0 0 4px rgba(56,189,248,.1); transform:scale(1.01); }
-        .search-icon { position:absolute; left:17px; top:50%; transform:translateY(-50%); font-size:1.15em; opacity:.5; pointer-events:none; transition:opacity .2s; }
-        .search-wrap:focus-within .search-icon { opacity:1; }
-        .search-results { position:absolute; top:calc(100% + 8px); left:0; right:0; background:var(--panel); border:1px solid var(--primary); border-radius:14px; box-shadow:0 16px 48px rgba(0,0,0,.5); z-index:50; overflow:hidden; display:none; }
-        .search-results.show { display:block; animation:dropIn .18s ease; }
-        @keyframes dropIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
-        .result-item { display:flex; justify-content:space-between; align-items:center; padding:13px 18px; cursor:pointer; transition:background .15s; border-bottom:1px solid var(--border); gap:10px; }
-        .result-item:last-child { border-bottom:none; }
-        .result-item:hover { background:rgba(56,189,248,.08); }
-        .result-item:hover .result-nombre { color:var(--primary); }
-        .result-foto { width:36px; height:36px; border-radius:8px; object-fit:cover; flex-shrink:0; background:var(--panel2); }
-        .result-nombre { font-weight:700; font-size:.92em; margin-bottom:2px; transition:color .15s; }
-        .result-precio { font-size:.82em; color:var(--primary); font-weight:700; }
-        .result-stock { font-size:.75em; padding:3px 10px; border-radius:12px; font-weight:700; flex-shrink:0; }
-        .stock-ok  { background:rgba(16,185,129,.15); color:var(--success); }
-        .stock-low { background:rgba(245,158,11,.15);  color:var(--warning); }
-        .stock-out { background:rgba(239,68,68,.15);   color:var(--danger); }
-        .no-results { padding:24px; text-align:center; opacity:.4; font-size:.88em; }
+        .search-wrap{position:relative}
+        .search-input{width:100%;background:var(--panel);border:2px solid var(--border);color:var(--text);padding:14px 20px 14px 46px;border-radius:14px;font-family:inherit;font-size:1.05em;outline:none;transition:all .25s}
+        .search-input:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(56,189,248,.1);transform:scale(1.01)}
+        .search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:1.1em;opacity:.5;pointer-events:none;transition:opacity .2s}
+        .search-wrap:focus-within .search-icon{opacity:1}
+        .search-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--panel);border:1px solid var(--primary);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:50;overflow:hidden;display:none}
+        .search-results.show{display:block;animation:dropIn .18s ease}
+        @keyframes dropIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+        .result-item{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;transition:background .15s;border-bottom:1px solid var(--border);gap:10px}
+        .result-item:last-child{border-bottom:none}
+        .result-item:hover{background:rgba(56,189,248,.07)}
+        .result-item:hover .result-nombre{color:var(--primary)}
+        .result-foto{width:34px;height:34px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--panel2)}
+        .result-nombre{font-weight:700;font-size:.92em;margin-bottom:2px;transition:color .15s}
+        .result-precio{font-size:.82em;color:var(--primary);font-weight:700}
+        .result-stock{font-size:.75em;padding:2px 8px;border-radius:10px;font-weight:700;flex-shrink:0}
+        .stock-ok{background:rgba(16,185,129,.15);color:var(--success)}
+        .stock-low{background:rgba(245,158,11,.15);color:var(--warning)}
+        .stock-out{background:rgba(239,68,68,.15);color:var(--danger)}
+        .no-results{padding:20px;text-align:center;opacity:.4;font-size:.88em}
+
+        /* CLIENTE / WHATSAPP */
+        .campo-cliente{position:relative}
+        .campo-cliente input{width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:11px 16px 11px 44px;border-radius:12px;font-family:inherit;font-size:.92em;outline:none;transition:all .2s}
+        .campo-cliente input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(56,189,248,.12)}
+        .campo-cliente .icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none}
 
         /* CARRITO */
-        .carrito-header { display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid var(--border); }
-        .carrito-title { font-family:'Rajdhani',sans-serif; font-size:1.15em; font-weight:700; letter-spacing:1px; display:flex; align-items:center; gap:8px; }
-        .cart-icon { display:inline-block; transition:transform .3s; }
-        .cart-icon.bounce { animation:cartBounce .4s cubic-bezier(.36,.07,.19,.97); }
-        @keyframes cartBounce { 0%,100%{transform:scale(1)} 30%{transform:scale(1.3) rotate(-10deg)} 60%{transform:scale(.9) rotate(5deg)} }
-        .btn-clear { background:none; border:1px solid rgba(239,68,68,.3); color:var(--danger); padding:4px 12px; border-radius:8px; font-size:.75em; cursor:pointer; font-family:inherit; transition:all .2s; }
-        .btn-clear:hover { background:rgba(239,68,68,.1); transform:scale(1.05); }
+        .carrito-header{display:flex;justify-content:space-between;align-items:center}
+        .carrito-title{font-family:'Rajdhani',sans-serif;font-size:1.1em;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:8px}
+        .cart-icon{display:inline-block}
+        .cart-icon.bounce{animation:cartBounce .4s cubic-bezier(.36,.07,.19,.97)}
+        @keyframes cartBounce{0%,100%{transform:scale(1)}30%{transform:scale(1.35) rotate(-12deg)}60%{transform:scale(.9) rotate(6deg)}}
+        .btn-clear{background:none;border:1px solid rgba(239,68,68,.3);color:var(--danger);padding:4px 12px;border-radius:8px;font-size:.75em;cursor:pointer;font-family:inherit;transition:all .2s}
+        .btn-clear:hover{background:rgba(239,68,68,.1);transform:scale(1.05)}
+        .carrito-lista{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+        .carrito-lista::-webkit-scrollbar{width:4px}
+        .carrito-lista::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+        .carrito-item{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;animation:itemIn .3s cubic-bezier(.175,.885,.32,1.275)}
+        @keyframes itemIn{from{opacity:0;transform:translateX(-16px) scale(.96)}to{opacity:1;transform:translateX(0) scale(1)}}
+        .carrito-item:hover{border-color:var(--primary);transform:translateX(4px)}
+        .item-nombre{flex:1;font-weight:600;font-size:.88em}
+        .item-precio{font-size:.78em;color:var(--muted)}
+        .item-qty{display:flex;align-items:center;gap:6px}
+        .qty-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer;font-size:1em;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .15s}
+        .qty-btn:hover{border-color:var(--primary);color:var(--primary);transform:scale(1.2)}
+        .qty-btn:active{transform:scale(.88)}
+        .qty-num{min-width:28px;text-align:center;font-weight:700;font-size:.9em}
+        .item-subtotal{font-weight:700;font-size:.9em;color:var(--primary);min-width:64px;text-align:right}
+        .item-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1em;padding:4px;transition:all .2s;border-radius:6px}
+        .item-del:hover{color:var(--danger);transform:scale(1.2) rotate(10deg);background:rgba(239,68,68,.1)}
+        .carrito-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:.25;gap:8px}
+        .carrito-empty div{font-size:2.5em;animation:float 3s ease infinite}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        .carrito-empty p{font-size:.85em}
 
-        .carrito-lista { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px; }
-        .carrito-lista::-webkit-scrollbar { width:4px; }
-        .carrito-lista::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
-
-        .carrito-item { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px 16px; display:flex; align-items:center; gap:10px; animation:itemIn .3s cubic-bezier(.175,.885,.32,1.275); transition:all .2s; }
-        @keyframes itemIn { from{opacity:0;transform:translateX(-20px) scale(.95)} to{opacity:1;transform:translateX(0) scale(1)} }
-        .carrito-item:hover { border-color:var(--primary); transform:translateX(4px); }
-        .item-nombre { flex:1; font-weight:700; font-size:.9em; }
-        .item-precio { font-size:.76em; color:var(--muted); }
-        .item-qty { display:flex; align-items:center; gap:6px; }
-        .qty-btn { width:28px; height:28px; border-radius:8px; border:1px solid var(--border); background:var(--panel2); color:var(--text); cursor:pointer; font-size:1em; font-weight:700; display:flex; align-items:center; justify-content:center; transition:all .15s; }
-        .qty-btn:hover { border-color:var(--primary); color:var(--primary); transform:scale(1.15); }
-        .qty-btn:active { transform:scale(.9); }
-        .qty-num { min-width:28px; text-align:center; font-weight:700; font-size:.95em; }
-        .item-subtotal { font-weight:700; font-size:.95em; color:var(--primary); min-width:68px; text-align:right; }
-        .item-del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:1.1em; padding:4px; transition:all .2s; border-radius:6px; }
-        .item-del:hover { color:var(--danger); transform:scale(1.2) rotate(10deg); background:rgba(239,68,68,.1); }
-
-        .carrito-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:.25; gap:10px; }
-        .carrito-empty div { font-size:3em; animation:float 3s ease infinite; }
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        .carrito-empty p { font-size:.88em; }
-
-        /* PANEL COBRO — estilos mejorados */
-        .resumen-title { font-family:'Rajdhani',sans-serif; font-size:1.4em; font-weight:700; letter-spacing:2px; padding-bottom:14px; border-bottom:2px solid var(--border); color:var(--primary); }
-        .resumen-linea { display:flex; justify-content:space-between; align-items:center; font-size:.9em; color:var(--muted); margin-bottom:8px; gap:8px; }
-        .resumen-linea.total { font-size:1.5em; font-weight:700; color:var(--text); border-top:2px solid var(--border); padding-top:14px; margin-top:6px; }
-        .resumen-linea.total span:last-child { color:var(--primary); transition:all .3s; }
-        .resumen-linea span:last-child { white-space:nowrap; }
+        /* PANEL DERECHO — Resumen + Pago */
+        .panel-right{background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:20px;gap:14px;overflow-y:auto}
+        .resumen-title{font-family:'Rajdhani',sans-serif;font-size:1.1em;font-weight:700;letter-spacing:1px;padding-bottom:12px;border-bottom:1px solid var(--border);color:var(--primary)}
+        .resumen-linea{display:flex;justify-content:space-between;align-items:center;font-size:.88em;color:var(--muted);margin-bottom:8px;gap:8px}
+        .resumen-linea.total{font-size:1.35em;font-weight:700;color:var(--text);border-top:1px solid var(--border);padding-top:12px;margin-top:4px}
+        .resumen-linea.total span:last-child{color:var(--primary);white-space:nowrap}
+        .resumen-linea span:last-child{white-space:nowrap}
 
         /* Pago */
-        .pago-section label { font-size:.75em; font-weight:700; color:var(--muted); display:block; margin-bottom:8px; letter-spacing:.5px; text-transform:uppercase; }
-        .pago-input { width:100%; background:var(--panel2); color:var(--text); border:2px solid var(--border); padding:16px; border-radius:14px; font-family:inherit; font-size:1.6em; font-weight:700; outline:none; transition:all .25s; text-align:center; }
-        .pago-input:focus { border-color:var(--success); box-shadow:0 0 0 4px rgba(16,185,129,.12); transform:scale(1.01); }
-        .vuelto-box { background:rgba(16,185,129,.08); border:2px solid rgba(16,185,129,.25); border-radius:14px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; transition:all .3s; }
-        .vuelto-box .label { font-size:.78em; color:var(--success); font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
-        .vuelto-box .valor { font-size:2.2em; font-weight:700; color:var(--success); transition:all .3s; }
-        .vuelto-neg { color:var(--danger)!important; }
-
-        /* Pagos rápidos */
-        .pagos-rapidos { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-        .pago-rapido { background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:10px; border-radius:10px; cursor:pointer; font-family:inherit; font-size:.88em; font-weight:700; transition:all .2s; }
-        .pago-rapido:hover { border-color:var(--primary); color:var(--primary); transform:translateY(-2px); box-shadow:0 4px 12px rgba(56,189,248,.15); }
-        .pago-rapido:active { transform:scale(.95); }
+        .pago-section label{font-size:.75em;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
+        .pago-input{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);padding:12px 16px;border-radius:10px;font-family:inherit;font-size:1.2em;font-weight:700;outline:none;transition:all .25s;text-align:center}
+        .pago-input:focus{border-color:var(--success);box-shadow:0 0 0 3px rgba(16,185,129,.15);transform:scale(1.01)}
+        .vuelto-box{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+        .vuelto-box .label{font-size:.75em;color:var(--success);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+        .vuelto-box .valor{font-size:1.6em;font-weight:700;color:var(--success);transition:all .3s}
+        .vuelto-neg{color:var(--danger)!important}
+        .pagos-rapidos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .pago-rapido{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.82em;font-weight:600;transition:all .2s}
+        .pago-rapido:hover{border-color:var(--primary);color:var(--primary);transform:translateY(-2px);box-shadow:0 4px 12px rgba(56,189,248,.15)}
+        .pago-rapido:active{transform:scale(.95)}
 
         /* Botón cobrar */
-        .btn-cobrar { width:100%; padding:20px; background:var(--success); color:#fff; border:none; border-radius:16px; font-family:'Rajdhani',sans-serif; font-size:1.4em; font-weight:700; cursor:pointer; letter-spacing:1px; transition:all .25s; box-shadow:0 8px 24px rgba(16,185,129,.35); position:relative; overflow:hidden; }
-        .btn-cobrar::after { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(255,255,255,.1),transparent); pointer-events:none; }
-        .btn-cobrar:hover:not(:disabled) { filter:brightness(1.1); transform:translateY(-3px); box-shadow:0 14px 32px rgba(16,185,129,.45); }
-        .btn-cobrar:active:not(:disabled) { transform:scale(.97); }
-        .btn-cobrar:disabled { opacity:.35; cursor:not-allowed; transform:none; box-shadow:none; }
+        .btn-cobrar{width:100%;padding:16px;background:var(--success);color:#fff;border:none;border-radius:14px;font-family:'Rajdhani',sans-serif;font-size:1.2em;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:all .25s;box-shadow:0 6px 20px rgba(16,185,129,.35)}
+        .btn-cobrar:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-3px);box-shadow:0 12px 30px rgba(16,185,129,.45)}
+        .btn-cobrar:active:not(:disabled){transform:scale(.97)}
+        .btn-cobrar:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
 
         /* Stats */
-        .stats-hoy { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-        .stat-mini { background:var(--panel2); border-radius:12px; padding:14px; text-align:center; border:1px solid var(--border); transition:all .2s; }
-        .stat-mini:hover { border-color:var(--primary); transform:scale(1.02); }
-        .stat-mini small { display:block; font-size:.65em; opacity:.5; text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
-        .stat-mini strong { font-size:1.5em; font-weight:700; }
+        .stats-hoy{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .stat-mini{background:var(--panel2);border-radius:10px;padding:12px;text-align:center;border:1px solid var(--border);transition:all .2s}
+        .stat-mini:hover{border-color:var(--primary);transform:scale(1.03)}
+        .stat-mini small{display:block;font-size:.65em;opacity:.5;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+        .stat-mini strong{font-size:1.2em;font-weight:700}
 
         /* MODAL TICKET */
-        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:200; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
-        .modal-overlay.show { display:flex; }
-        .ticket { background:#fff; color:#111; border-radius:12px; padding:28px 24px; width:min(360px, 90vw); font-family:'DM Sans',sans-serif; animation:ticketIn .3s ease; }
-        @keyframes ticketIn { from{opacity:0;transform:scale(.9) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
-        .ticket-header { text-align:center; border-bottom:2px dashed #ddd; padding-bottom:16px; margin-bottom:16px; }
-        .ticket-logo { font-family:'Rajdhani',sans-serif; font-size:1.8em; font-weight:700; color:#0f172a; letter-spacing:2px; }
-        .ticket-logo span { color:#38bdf8; }
-        .ticket-sub { font-size:.75em; color:#666; margin-top:4px; }
-        .ticket-item { display:flex; justify-content:space-between; font-size:.85em; padding:5px 0; border-bottom:1px solid #f0f0f0; }
-        .ticket-item:last-of-type { border:none; }
-        .ticket-total { display:flex; justify-content:space-between; font-weight:700; font-size:1.1em; border-top:2px dashed #ddd; padding-top:12px; margin-top:8px; }
-        .ticket-footer { text-align:center; margin-top:16px; font-size:.75em; color:#666; }
-        .ticket-btns { display:flex; gap:10px; margin-top:20px; }
-        .ticket-btns button { flex:1; padding:10px; border-radius:8px; border:none; font-family:inherit; font-size:.88em; font-weight:700; cursor:pointer; transition:.2s; }
-        .btn-nueva { background:#38bdf8; color:#fff; }
-        .btn-nueva:hover { filter:brightness(1.1); }
-        .btn-cerrar { background:#f1f5f9; color:#64748b; }
-        .btn-cerrar:hover { background:#e2e8f0; }
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+        .modal-overlay.show{display:flex}
+        .ticket{background:#fff;color:#111;border-radius:12px;padding:28px 24px;width:min(360px,90vw);font-family:'DM Sans',sans-serif;animation:ticketIn .3s ease}
+        @keyframes ticketIn{from{opacity:0;transform:scale(.9) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        .ticket-header{text-align:center;border-bottom:2px dashed #ddd;padding-bottom:16px;margin-bottom:16px}
+        .ticket-logo{font-family:'Rajdhani',sans-serif;font-size:1.8em;font-weight:700;color:#0f172a;letter-spacing:2px}
+        .ticket-logo span{color:#38bdf8}
+        .ticket-sub{font-size:.75em;color:#666;margin-top:4px}
+        .ticket-item{display:flex;justify-content:space-between;font-size:.85em;padding:5px 0;border-bottom:1px solid #f0f0f0}
+        .ticket-item:last-of-type{border:none}
+        .ticket-total{display:flex;justify-content:space-between;font-weight:700;font-size:1.1em;border-top:2px dashed #ddd;padding-top:12px;margin-top:8px}
+        .ticket-footer{text-align:center;margin-top:16px;font-size:.75em;color:#666}
+        .ticket-btns{display:flex;gap:10px;margin-top:20px}
+        .ticket-btns button{flex:1;padding:10px;border-radius:8px;border:none;font-family:inherit;font-size:.88em;font-weight:700;cursor:pointer;transition:.2s}
+        .btn-nueva{background:#38bdf8;color:#fff}
+        .btn-nueva:hover{filter:brightness(1.1)}
+        .btn-cerrar{background:#f1f5f9;color:#64748b}
+        .btn-cerrar:hover{background:#e2e8f0}
 
         /* Toast */
-        #toasts { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:500; pointer-events:none; min-width:240px; }
-        .toast { padding:11px 18px; border-radius:10px; font-weight:600; font-size:.85em; text-align:center; animation:tIn .3s ease; box-shadow:0 6px 24px rgba(0,0,0,.35); }
-        .toast.success { background:var(--success); color:#fff; }
-        .toast.danger  { background:var(--danger);  color:#fff; }
-        @keyframes tIn  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes tOut { to{opacity:0;transform:translateY(10px)} }
-
-        @media(max-width:900px) {
-            .pos-layout { grid-template-columns:1fr; grid-template-rows:auto 1fr; }
-            .panel-left { border-right:none; border-bottom:1px solid var(--border); }
-            body { overflow:auto; }
-        }
+        #toasts{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:500;pointer-events:none;min-width:240px}
+        .toast{padding:11px 18px;border-radius:10px;font-weight:600;font-size:.85em;text-align:center;animation:tIn .3s ease;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+        .toast.success{background:var(--success);color:#fff}
+        .toast.danger{background:var(--danger);color:#fff}
+        .toast.warning{background:var(--warning);color:#fff}
+        @keyframes tIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
         /* OFFLINE */
         .offline-bar{display:none;background:rgba(245,158,11,.15);border-bottom:1px solid rgba(245,158,11,.3);padding:6px 20px;font-size:.78em;font-weight:600;color:var(--warning);text-align:center;gap:8px;align-items:center;justify-content:center}
         .offline-bar.show{display:flex}
         .online-dot{width:8px;height:8px;border-radius:50%;background:var(--success);flex-shrink:0}
         .offline-dot{width:8px;height:8px;border-radius:50%;background:var(--warning);flex-shrink:0;animation:pulse 1s ease infinite}
-        .status-chip{display:flex;align-items:center;gap:5px;font-size:.72em;font-weight:700;padding:3px 10px;border-radius:20px;cursor:default}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        .status-chip{display:flex;align-items:center;gap:5px;font-size:.72em;font-weight:700;padding:3px 10px;border-radius:20px}
         .status-online{background:rgba(16,185,129,.15);color:var(--success);border:1px solid rgba(16,185,129,.3)}
         .status-offline{background:rgba(245,158,11,.15);color:var(--warning);border:1px solid rgba(245,158,11,.3)}
         .pending-badge{background:var(--warning);color:#fff;font-size:.6em;padding:1px 5px;border-radius:8px;margin-left:3px;display:none}
+
+        @media(max-width:700px){
+            .pos-layout{grid-template-columns:1fr;grid-template-rows:1fr auto}
+            .panel-right{border-left:none;border-top:1px solid var(--border);max-height:45vh}
+            body{overflow:auto}
+        }
     </style>
 </head>
 <body>
@@ -214,89 +213,13 @@
     </div>
 </nav>
 
+<div id="toasts"></div>
+
 <!-- LAYOUT -->
 <div class="pos-layout">
 
-    <!-- IZQUIERDA: Resumen + Pago (GRANDE) -->
+    <!-- IZQUIERDA: Buscador + Carrito -->
     <div class="panel-left">
-
-        <div class="resumen-title" style="font-size:1.3em;letter-spacing:2px">📋 COBRO</div>
-
-        <!-- Cliente -->
-        <div style="position:relative">
-            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none;font-size:1em">👤</span>
-            <input type="text" id="clienteInput"
-                   style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:12px 16px 12px 42px;border-radius:12px;font-family:inherit;font-size:.95em;outline:none;transition:.2s"
-                   placeholder="Nombre del cliente (opcional)"
-                   autocomplete="off"
-                   oninput="buscarClienteCRM(this.value)"
-                   onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(56,189,248,.12)'"
-                   onblur="setTimeout(()=>document.getElementById('crmSugg').style.display='none',200)">
-            <div id="crmSugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;z-index:50;margin-top:4px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.3)"></div>
-        </div>
-
-        <!-- WhatsApp -->
-        <div style="position:relative">
-            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.4;pointer-events:none">📱</span>
-            <input type="tel" id="whatsappInput"
-                   style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:12px 16px 12px 42px;border-radius:12px;font-family:inherit;font-size:.95em;outline:none;transition:.2s"
-                   placeholder="WhatsApp (opcional)"
-                   autocomplete="off"
-                   onfocus="this.style.borderColor='#25d366';this.style.boxShadow='0 0 0 3px rgba(37,211,102,.12)'"
-                   onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-        </div>
-
-        <!-- Productos en la venta -->
-        <div id="resumenItems" style="display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;background:var(--panel2);border-radius:12px;padding:10px;border:1px solid var(--border)"></div>
-
-        <!-- Totales -->
-        <div style="background:var(--panel2);border-radius:14px;padding:16px;border:1px solid var(--border)">
-            <div class="resumen-linea"><span>Productos</span><span id="resumenCant">0 items</span></div>
-            <div class="resumen-linea"><span>Subtotal</span><span id="resumenSub">$0.00</span></div>
-            <div class="resumen-linea total" style="font-size:1.8em;margin-top:10px">
-                <span>TOTAL</span>
-                <span id="resumenTotal" style="color:var(--primary);font-size:1em">$0.00</span>
-            </div>
-        </div>
-
-        <!-- Monto recibido -->
-        <div class="pago-section">
-            <label style="font-size:.8em;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">💵 Monto recibido</label>
-            <input type="number" class="pago-input" id="pagoInput"
-                   placeholder="0.00" step="0.01" min="0"
-                   style="font-size:1.6em;padding:16px;text-align:center"
-                   oninput="calcVuelto()">
-            <div class="pagos-rapidos" id="pagosRapidos" style="margin-top:10px"></div>
-        </div>
-
-        <!-- Vuelto -->
-        <div class="vuelto-box" style="padding:16px 20px">
-            <span class="label" style="font-size:.85em">Vuelto / Cambio</span>
-            <span class="valor" id="vueltoValor" style="font-size:2em">$0.00</span>
-        </div>
-
-        <!-- Botón cobrar -->
-        <button class="btn-cobrar" id="btnCobrar" onclick="procesarVenta()" disabled
-                style="font-size:1.3em;padding:20px;letter-spacing:1px">
-            ✅ COBRAR
-        </button>
-
-        <!-- Stats del día -->
-        <div class="stats-hoy">
-            <div class="stat-mini">
-                <small>Transacciones hoy</small>
-                <strong id="statCant" style="color:var(--primary);font-size:1.5em">0</strong>
-            </div>
-            <div class="stat-mini">
-                <small>Total vendido hoy</small>
-                <strong id="statTotal" style="color:var(--success);font-size:1.5em">$0</strong>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- DERECHA: Buscador + Carrito -->
-    <div class="panel-right">
 
         <!-- Buscador -->
         <div class="search-wrap">
@@ -307,9 +230,34 @@
             <div class="search-results" id="searchResults"></div>
         </div>
 
+        <!-- Cliente -->
+        <div class="campo-cliente">
+            <span class="icon">👤</span>
+            <input type="text" id="clienteInput"
+                   placeholder="Nombre del cliente (opcional)"
+                   autocomplete="off"
+                   oninput="buscarClienteCRM(this.value)"
+                   onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(56,189,248,.12)'"
+                   onblur="setTimeout(()=>document.getElementById('crmSugg').style.display='none',200)">
+            <div id="crmSugg" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:10px;z-index:50;margin-top:4px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.3)"></div>
+        </div>
+
+        <!-- WhatsApp -->
+        <div class="campo-cliente">
+            <span class="icon">📱</span>
+            <input type="tel" id="whatsappInput"
+                   placeholder="WhatsApp cliente (opcional)"
+                   autocomplete="off"
+                   onfocus="this.style.borderColor='#25d366';this.style.boxShadow='0 0 0 3px rgba(37,211,102,.12)'"
+                   onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+        </div>
+
         <!-- Carrito header -->
         <div class="carrito-header">
-            <span class="carrito-title"><span class="cart-icon" id="cartIcon">🛒</span> CARRITO <span id="itemCount" style="color:var(--primary);font-size:.85em">(0)</span></span>
+            <span class="carrito-title">
+                <span class="cart-icon" id="cartIcon">🛒</span>
+                CARRITO <span id="itemCount" style="color:var(--primary);font-size:.85em">(0)</span>
+            </span>
             <button class="btn-clear" onclick="limpiarCarrito()">✕ Limpiar</button>
         </div>
 
@@ -318,6 +266,63 @@
             <div class="carrito-empty" id="carritoEmpty">
                 <div>🛒</div>
                 <p>Busca un producto para agregar</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DERECHA: Resumen + Pago -->
+    <div class="panel-right">
+
+        <div class="resumen-title">📋 RESUMEN</div>
+
+        <!-- Items por producto -->
+        <div id="resumenItems" style="display:none;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;background:var(--panel2);border-radius:10px;padding:8px;border:1px solid var(--border)"></div>
+
+        <!-- Totales -->
+        <div>
+            <div class="resumen-linea"><span>Productos</span><span id="resumenCant">0 items</span></div>
+            <div class="resumen-linea"><span>Subtotal</span><span id="resumenSub">$0.00</span></div>
+            <div class="resumen-linea total"><span>TOTAL</span><span id="resumenTotal">$0.00</span></div>
+        </div>
+
+        <!-- Pago -->
+        <div class="pago-section">
+            <label>💵 Monto recibido</label>
+            <input type="number" class="pago-input" id="pagoInput"
+                   placeholder="0.00" step="0.01" min="0"
+                   oninput="calcVuelto()">
+            <div class="pagos-rapidos" id="pagosRapidos" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Vuelto -->
+        <div class="vuelto-box">
+            <span class="label">Vuelto</span>
+            <span class="valor" id="vueltoValor">$0.00</span>
+        </div>
+
+        <!-- WhatsApp en ticket -->
+        <div style="display:none;font-size:.82em;color:#555;margin-top:4px" id="ticketWspPanel"></div>
+
+        <!-- Botón cobrar -->
+        <button class="btn-cobrar" id="btnCobrar" onclick="procesarVenta()" disabled>
+            ✅ COBRAR
+        </button>
+
+        <!-- Stats hoy -->
+        <div>
+            <div style="font-size:.7em;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">
+                📊 Mi turno de hoy
+            </div>
+            <div class="stats-hoy">
+                <div class="stat-mini">
+                    <small>Transacciones</small>
+                    <strong id="statCant" style="color:var(--primary)">0</strong>
+                </div>
+                <div class="stat-mini">
+                    <small>Total vendido</small>
+                    <strong id="statTotal" style="color:var(--success)">$0</strong>
+                </div>
             </div>
         </div>
 
@@ -335,8 +340,7 @@
         </div>
         <div id="ticketItems"></div>
         <div class="ticket-total">
-            <span>TOTAL</span>
-            <span id="ticketTotal"></span>
+            <span>TOTAL</span><span id="ticketTotal"></span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:.85em;margin-top:8px;color:#555">
             <span>Pagado</span><span id="ticketPagado"></span>
@@ -345,16 +349,13 @@
             <span>Vuelto</span><span id="ticketVuelto"></span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:.82em;color:#555;margin-top:4px" id="ticketWsp"></div>
-
-        <!-- QR CODE -->
+        <!-- QR -->
         <div style="text-align:center;margin:16px 0 8px;border-top:1px dashed #ddd;padding-top:14px">
             <div id="qrcode" style="display:inline-block"></div>
             <div style="font-size:.65em;color:#999;margin-top:6px">Escanea para ver el detalle</div>
         </div>
-
         <div class="ticket-footer">
-            Atendido por: <b id="ticketCajero"></b><br>
-            ¡Gracias por su compra!
+            Atendido por: <b id="ticketCajero"></b><br>¡Gracias por su compra!
         </div>
         <div class="ticket-btns">
             <button class="btn-nueva" onclick="nuevaVenta()">🛒 Nueva venta</button>
@@ -363,8 +364,6 @@
         </div>
     </div>
 </div>
-
-<div id="toasts"></div>
 
 <script>
 // ── Tema ────────────────────────────────────────
@@ -376,38 +375,31 @@ function toggleTheme() {
     localStorage.setItem('df-theme', next);
 }
 
-// ── Toast ───────────────────────────────────────
-function toast(msg, type='success') {
-    const c = document.getElementById('toasts');
-    const el = document.createElement('div');
-    el.className = `toast ${type}`;
-    el.textContent = msg;
-    c.appendChild(el);
-    setTimeout(() => { el.style.animation='tOut .3s ease forwards'; setTimeout(()=>el.remove(),300); }, 3000);
+// ── Toast ────────────────────────────────────────
+function toast(msg, tipo='success', dur=2800) {
+    const t = document.createElement('div');
+    t.className = `toast ${tipo}`;
+    t.textContent = msg;
+    document.getElementById('toasts').appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(10px)'; t.style.transition='.4s'; setTimeout(()=>t.remove(),400); }, dur);
 }
 
-// ── Estado del carrito ──────────────────────────
-let carrito = [];  // [{id, nombre, precio, cantidad, stock}]
-
-// ── Buscador ────────────────────────────────────
-let searchTimer = null;
+// ── Buscador ─────────────────────────────────────
 const searchInput   = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
+let searchTimer;
 
 searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
     const q = searchInput.value.trim();
-    if (q.length < 1) { searchResults.classList.remove('show'); return; }
+    if (!q) { searchResults.classList.remove('show'); return; }
     searchTimer = setTimeout(() => buscar(q), 200);
 });
-
 searchInput.addEventListener('keydown', e => {
     if (e.key === 'Escape') { searchResults.classList.remove('show'); searchInput.value = ''; }
 });
-
 document.addEventListener('click', e => {
-    if (!searchInput.contains(e.target) && !searchResults.contains(e.target))
-        searchResults.classList.remove('show');
+    if (!e.target.closest('.search-wrap')) searchResults.classList.remove('show');
 });
 
 async function buscar(q) {
@@ -425,12 +417,14 @@ function renderResultados(items) {
         return;
     }
     searchResults.innerHTML = items.map(p => {
-        const sc = p.stock === 0 ? 'stock-out' : p.stock <= 5 ? 'stock-low' : 'stock-ok';
-        const sl = p.stock === 0 ? 'AGOTADO' : `${p.stock} uds`;
-        const foto = p.foto ? `<img src="${p.foto}" class="result-foto">` : `<div class="result-foto" style="display:flex;align-items:center;justify-content:center;opacity:.3;font-size:1.2em">📷</div>`;
+        const sc  = p.stock === 0 ? 'stock-out' : p.stock <= 5 ? 'stock-low' : 'stock-ok';
+        const sl  = p.stock === 0 ? 'AGOTADO' : `${p.stock} uds`;
+        const foto = p.foto
+            ? `<img src="${p.foto}" class="result-foto" style="width:34px;height:34px;border-radius:8px;object-fit:cover;flex-shrink:0">`
+            : `<div style="width:34px;height:34px;border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:.3;font-size:1.1em">📷</div>`;
         return `<div class="result-item" onclick="agregarAlCarrito(${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},${p.stock})">
             ${foto}
-            <div style="flex:1">
+            <div style="flex:1;min-width:0">
                 <div class="result-nombre">${p.nombre}</div>
                 <div class="result-precio">$${p.precio.toFixed(2)}</div>
             </div>
@@ -440,10 +434,11 @@ function renderResultados(items) {
     searchResults.classList.add('show');
 }
 
-// ── Carrito ─────────────────────────────────────
+// ── Carrito ──────────────────────────────────────
+let carrito = [];
+
 function agregarAlCarrito(id, nombre, precio, stock) {
     if (stock === 0) { toast('⚠️ Producto agotado', 'danger'); return; }
-
     const existente = carrito.find(i => i.id === id);
     if (existente) {
         if (existente.cantidad >= stock) { toast(`⚠️ Solo hay ${stock} en stock`, 'danger'); return; }
@@ -451,8 +446,7 @@ function agregarAlCarrito(id, nombre, precio, stock) {
     } else {
         carrito.push({ id, nombre, precio, cantidad: 1, stock });
     }
-
-    // Animar icono del carrito
+    // Animar icono
     const icon = document.getElementById('cartIcon');
     icon.classList.remove('bounce');
     void icon.offsetWidth;
@@ -470,12 +464,8 @@ function cambiarCantidad(id, delta) {
     const item = carrito.find(i => i.id === id);
     if (!item) return;
     item.cantidad += delta;
-    if (item.cantidad <= 0) {
-        carrito = carrito.filter(i => i.id !== id);
-    } else if (item.cantidad > item.stock) {
-        item.cantidad = item.stock;
-        toast(`Máximo ${item.stock} uds disponibles`, 'danger');
-    }
+    if (item.cantidad <= 0)         carrito = carrito.filter(i => i.id !== id);
+    else if (item.cantidad > item.stock) { item.cantidad = item.stock; toast(`Máximo ${item.stock} uds`, 'danger'); }
     renderCarrito();
     actualizarResumen();
 }
@@ -499,9 +489,7 @@ function renderCarrito() {
     const lista = document.getElementById('carritoLista');
     const empty = document.getElementById('carritoEmpty');
     const count = document.getElementById('itemCount');
-
-    count.textContent = `(${carrito.reduce((s,i) => s+i.cantidad, 0)})`;
-
+    count.textContent = `(${carrito.reduce((s,i)=>s+i.cantidad,0)})`;
     if (!carrito.length) {
         lista.innerHTML = '';
         lista.appendChild(empty);
@@ -509,7 +497,6 @@ function renderCarrito() {
         return;
     }
     empty.style.display = 'none';
-
     lista.innerHTML = carrito.map(item => `
         <div class="carrito-item">
             <div style="flex:1">
@@ -521,103 +508,111 @@ function renderCarrito() {
                 <span class="qty-num">${item.cantidad}</span>
                 <button class="qty-btn" onclick="cambiarCantidad(${item.id},1)">+</button>
             </div>
-            <span class="item-subtotal">$${(item.precio * item.cantidad).toFixed(2)}</span>
+            <span class="item-subtotal">$${(item.precio*item.cantidad).toFixed(2)}</span>
             <button class="item-del" onclick="eliminarItem(${item.id})">🗑</button>
-        </div>
-    `).join('');
+        </div>`).join('');
 }
 
 function actualizarResumen() {
-    const cant  = carrito.reduce((s,i) => s+i.cantidad, 0);
-    const total = carrito.reduce((s,i) => s+i.precio*i.cantidad, 0);
+    const cant  = carrito.reduce((s,i)=>s+i.cantidad,0);
+    const total = carrito.reduce((s,i)=>s+i.precio*i.cantidad,0);
 
-    // Mostrar cada producto con su subtotal
+    // Items por producto
     const resItems = document.getElementById('resumenItems');
     if (carrito.length) {
-        resItems.innerHTML = carrito.map(i =>
-            `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.78em;color:var(--muted);padding:3px 0;border-bottom:0.5px solid var(--border)">
-                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px">${i.cantidad}× ${i.nombre}</span>
-                <span style="color:var(--text);font-weight:600;white-space:nowrap">$${(i.precio*i.cantidad).toFixed(2)}</span>
-            </div>`
-        ).join('');
         resItems.style.display = 'flex';
+        resItems.innerHTML = carrito.map(i =>
+            `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.78em;padding:3px 0;border-bottom:0.5px solid var(--border)">
+                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;color:var(--muted)">${i.cantidad}× ${i.nombre}</span>
+                <span style="color:var(--text);font-weight:600;white-space:nowrap">$${(i.precio*i.cantidad).toFixed(2)}</span>
+            </div>`).join('');
     } else {
-        resItems.innerHTML = '';
         resItems.style.display = 'none';
     }
 
-    document.getElementById('resumenCant').textContent  = `${cant} item${cant !== 1 ? 's' : ''}`;
+    document.getElementById('resumenCant').textContent  = `${cant} item${cant!==1?'s':''}`;
     document.getElementById('resumenSub').textContent   = `$${total.toFixed(2)}`;
     document.getElementById('resumenTotal').textContent = `$${total.toFixed(2)}`;
 
-    // Pagos rápidos sugeridos
     const pr = document.getElementById('pagosRapidos');
     if (total > 0) {
-        const sugeridos = [total, Math.ceil(total/5)*5, Math.ceil(total/10)*10, Math.ceil(total/50)*50]
-            .filter((v,i,a) => a.indexOf(v)===i).slice(0,4);
-        pr.innerHTML = sugeridos.map(v =>
-            `<button class="pago-rapido" onclick="setPago(${v})">$${v.toFixed(2)}</button>`
-        ).join('');
-    } else {
-        pr.innerHTML = '';
-    }
+        const sug = [total, Math.ceil(total/5)*5, Math.ceil(total/10)*10, Math.ceil(total/50)*50]
+            .filter((v,i,a)=>a.indexOf(v)===i).slice(0,4);
+        pr.innerHTML = sug.map(v=>`<button class="pago-rapido" onclick="setPago(${v})">$${v.toFixed(2)}</button>`).join('');
+    } else { pr.innerHTML=''; }
 
     calcVuelto();
-
-    const btnCobrar = document.getElementById('btnCobrar');
-    const pago = parseFloat(document.getElementById('pagoInput').value) || 0;
-    btnCobrar.disabled = !carrito.length || pago < total;
+    const pago = parseFloat(document.getElementById('pagoInput').value)||0;
+    document.getElementById('btnCobrar').disabled = !carrito.length || pago < total;
 }
 
-function setPago(valor) {
-    document.getElementById('pagoInput').value = valor.toFixed(2);
-    calcVuelto();
-}
+function setPago(v) { document.getElementById('pagoInput').value=v.toFixed(2); calcVuelto(); }
 
 function calcVuelto() {
-    const total  = carrito.reduce((s,i) => s+i.precio*i.cantidad, 0);
-    const pago   = parseFloat(document.getElementById('pagoInput').value) || 0;
+    const total  = carrito.reduce((s,i)=>s+i.precio*i.cantidad,0);
+    const pago   = parseFloat(document.getElementById('pagoInput').value)||0;
     const vuelto = pago - total;
     const el     = document.getElementById('vueltoValor');
     el.textContent = `$${Math.abs(vuelto).toFixed(2)}`;
-    el.className   = 'valor ' + (vuelto < 0 ? 'vuelto-neg' : '');
-
-    const btnCobrar = document.getElementById('btnCobrar');
-    btnCobrar.disabled = !carrito.length || pago < total;
+    el.className   = vuelto < -0.001 ? 'valor vuelto-neg' : 'valor';
+    document.getElementById('btnCobrar').disabled = !carrito.length || pago < total;
 }
 
-// ── Procesar venta ──────────────────────────────
+// ── CRM autocomplete ──────────────────────────────
+async function buscarClienteCRM(q) {
+    const sugg = document.getElementById('crmSugg');
+    if (q.length < 2) { sugg.style.display='none'; return; }
+    try {
+        const res  = await fetch(`/clientes/api/buscar?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (!data.length) { sugg.style.display='none'; return; }
+        sugg.innerHTML = data.map(c =>
+            `<div onclick="selClienteCRM('${c.nombre}','${c.whatsapp||''}')"
+                  style="padding:10px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid var(--border);transition:.15s"
+                  onmouseover="this.style.background='var(--panel2)'" onmouseout="this.style.background=''">
+                <div>
+                    <div style="font-weight:600;font-size:.88em">👤 ${c.nombre}</div>
+                    <div style="font-size:.72em;color:var(--muted)">${c.compras} compras · $${c.gastado.toFixed(0)}</div>
+                </div>
+                ${c.whatsapp ? `<span style="font-size:.72em;color:#25d366">📱</span>` : ''}
+            </div>`).join('');
+        sugg.style.display='block';
+    } catch { sugg.style.display='none'; }
+}
+function selClienteCRM(nombre, wsp) {
+    document.getElementById('clienteInput').value  = nombre;
+    document.getElementById('whatsappInput').value = wsp;
+    document.getElementById('crmSugg').style.display='none';
+    document.getElementById('clienteInput').style.borderColor='var(--success)';
+}
+
+// ── Procesar venta ────────────────────────────────
 async function procesarVenta() {
     if (!carrito.length) return;
-    const total    = carrito.reduce((s,i) => s+i.precio*i.cantidad, 0);
-    const pago     = parseFloat(document.getElementById('pagoInput').value) || 0;
+    const total    = carrito.reduce((s,i)=>s+i.precio*i.cantidad,0);
+    const pago     = parseFloat(document.getElementById('pagoInput').value)||0;
     const cliente  = document.getElementById('clienteInput').value.trim();
     const whatsapp = document.getElementById('whatsappInput').value.trim();
-    if (pago < total) { toast('⚠️ Monto insuficiente', 'danger'); return; }
-
+    if (pago < total) { toast('⚠️ Monto insuficiente','danger'); return; }
     const btn = document.getElementById('btnCobrar');
-    btn.disabled = true; btn.textContent = '⏳ Procesando...';
-
+    btn.disabled=true; btn.textContent='⏳ Procesando...';
     try {
-        const res  = await fetch('/pos/vender', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: carrito.map(i=>({id:i.id,cantidad:i.cantidad})), cliente, whatsapp })
+        const res  = await fetch('/pos/vender',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({items:carrito.map(i=>({id:i.id,cantidad:i.cantidad})),cliente,whatsapp})
         });
         const data = await res.json();
-        if (data.ok) { mostrarTicket(data, pago); cargarStatsHoy(); }
-        else { toast(`❌ ${data.msg}`, 'danger'); btn.disabled=false; btn.textContent='✅ COBRAR'; }
-    } catch {
-        toast('❌ Error de conexión', 'danger'); btn.disabled=false; btn.textContent='✅ COBRAR';
-    }
+        if (data.ok) { mostrarTicket(data,pago); cargarStatsHoy(); }
+        else { toast(`❌ ${data.msg}`,'danger'); btn.disabled=false; btn.textContent='✅ COBRAR'; }
+    } catch { toast('❌ Error de conexión','danger'); btn.disabled=false; btn.textContent='✅ COBRAR'; }
 }
 
-// ── Ticket ──────────────────────────────────────
+// ── Ticket ────────────────────────────────────────
 function mostrarTicket(data, pago) {
     const vuelto = pago - data.total;
     document.getElementById('ticketFecha').textContent   = new Date().toLocaleString('es');
-    document.getElementById('ticketCliente').textContent = data.cliente !== 'Cliente general' ? `👤 Cliente: ${data.cliente}` : '';
-    document.getElementById('ticketItems').innerHTML = data.detalle.map(d =>
+    document.getElementById('ticketCliente').textContent = data.cliente !== 'Cliente general' ? `👤 ${data.cliente}` : '';
+    document.getElementById('ticketItems').innerHTML = data.detalle.map(d=>
         `<div class="ticket-item"><span>${d.cantidad}× ${d.nombre}</span><span>$${d.subtotal.toFixed(2)}</span></div>`
     ).join('');
     document.getElementById('ticketTotal').textContent  = `$${data.total.toFixed(2)}`;
@@ -625,96 +620,46 @@ function mostrarTicket(data, pago) {
     document.getElementById('ticketVuelto').textContent = `$${vuelto.toFixed(2)}`;
     document.getElementById('ticketCajero').textContent = data.cajero;
 
-    // WhatsApp link
     const wspEl = document.getElementById('ticketWsp');
     if (data.whatsapp) {
         const num = data.whatsapp.replace(/\D/g,'');
-        const msg = encodeURIComponent(`Hola ${data.cliente || ''}, su compra por $${data.total.toFixed(2)} fue procesada. ¡Gracias!`);
-        wspEl.innerHTML = `<span>📱 ${data.whatsapp}</span><a href="https://wa.me/${num}?text=${msg}" target="_blank" style="color:#25d366;font-weight:700;text-decoration:none">💬 Enviar WhatsApp</a>`;
-        wspEl.style.display = 'flex';
-    } else {
-        wspEl.style.display = 'none';
-    }
+        const msg = encodeURIComponent(`Hola ${data.cliente||''}, su compra por $${data.total.toFixed(2)} fue procesada. ¡Gracias!`);
+        wspEl.innerHTML=`<span>📱 ${data.whatsapp}</span><a href="https://wa.me/${num}?text=${msg}" target="_blank" style="color:#25d366;font-weight:700;text-decoration:none">💬 WhatsApp</a>`;
+        wspEl.style.display='flex'; wspEl.style.justifyContent='space-between';
+    } else { wspEl.style.display='none'; }
 
-    // ── Generar QR ─────────────────────────────
+    // QR
     const qrEl = document.getElementById('qrcode');
-    qrEl.innerHTML = '';
-    const qrText = [
-        'DRIVEFLOW PRO',
-        `Fecha: ${new Date().toLocaleString('es')}`,
-        `Cajero: ${data.cajero}`,
-        data.cliente !== 'Cliente general' ? `Cliente: ${data.cliente}` : '',
-        '---',
-        ...data.detalle.map(d => `${d.cantidad}x ${d.nombre}: $${d.subtotal.toFixed(2)}`),
-        '---',
-        `TOTAL: $${data.total.toFixed(2)}`,
-        `Pagado: $${pago.toFixed(2)}`,
-        `Vuelto: $${vuelto.toFixed(2)}`,
-        'Gracias por su compra!'
+    qrEl.innerHTML='';
+    const qrText = ['DRIVEFLOW PRO',`Fecha: ${new Date().toLocaleString('es')}`,`Cajero: ${data.cajero}`,
+        data.cliente!=='Cliente general'?`Cliente: ${data.cliente}`:'','---',
+        ...data.detalle.map(d=>`${d.cantidad}x ${d.nombre}: $${d.subtotal.toFixed(2)}`),
+        '---',`TOTAL: $${data.total.toFixed(2)}`,`Pagado: $${pago.toFixed(2)}`,`Vuelto: $${vuelto.toFixed(2)}`,'¡Gracias!'
     ].filter(Boolean).join('\n');
-
-    new QRCode(qrEl, {
-        text:         qrText,
-        width:        128,
-        height:       128,
-        colorDark:    '#0f172a',
-        colorLight:   '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
-    });
+    new QRCode(qrEl,{text:qrText,width:128,height:128,colorDark:'#0f172a',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
 
     document.getElementById('modalTicket').classList.add('show');
-    if (data.offline) toast('📡 Venta guardada offline — se sincronizará al volver la conexión', 'warning');
-    if (data.errores && data.errores.length) data.errores.forEach(e => toast(`⚠️ ${e}`, 'danger'));
+    if (data.offline) toast('📡 Venta guardada offline','warning');
+    if (data.errores&&data.errores.length) data.errores.forEach(e=>toast(`⚠️ ${e}`,'danger'));
 }
 
-function imprimirTicket() {
-    window.print();
-}
+function imprimirTicket() { window.print(); }
 
 function nuevaVenta() {
     limpiarCarrito();
-    document.getElementById('pagoInput').value    = '';
-    document.getElementById('clienteInput').value  = '';
-    document.getElementById('whatsappInput').value = '';
+    document.getElementById('pagoInput').value='';
+    document.getElementById('clienteInput').value='';
+    document.getElementById('whatsappInput').value='';
     calcVuelto(); cerrarTicket();
-    document.getElementById('btnCobrar').textContent = '✅ COBRAR';
+    document.getElementById('btnCobrar').textContent='✅ COBRAR';
     searchInput.focus();
 }
-
 function cerrarTicket() {
     document.getElementById('modalTicket').classList.remove('show');
-    document.getElementById('btnCobrar').textContent = '✅ COBRAR';
+    document.getElementById('btnCobrar').textContent='✅ COBRAR';
 }
 
-// ── Autocomplete clientes CRM ───────────────────
-async function buscarClienteCRM(q) {
-    const sugg = document.getElementById('crmSugg');
-    if (q.length < 2) { sugg.style.display = 'none'; return; }
-    try {
-        const res  = await fetch(`/clientes/api/buscar?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        if (!data.length) { sugg.style.display = 'none'; return; }
-        sugg.innerHTML = data.map(c =>
-            `<div onclick="selClienteCRM('${c.nombre}','${c.whatsapp||''}')"
-                  style="padding:10px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid var(--border);transition:.15s"
-                  onmouseover="this.style.background='var(--panel2)'" onmouseout="this.style.background=''"  >
-                <div>
-                    <div style="font-weight:600;font-size:.88em">👤 ${c.nombre}</div>
-                    <div style="font-size:.72em;color:var(--muted)">${c.compras} compras · $${c.gastado.toFixed(0)} gastado</div>
-                </div>
-                ${c.whatsapp ? `<span style="font-size:.72em;color:#25d366">📱 ${c.whatsapp}</span>` : ''}
-            </div>`
-        ).join('');
-        sugg.style.display = 'block';
-    } catch { sugg.style.display = 'none'; }
-}
-
-function selClienteCRM(nombre, wsp) {
-    document.getElementById('clienteInput').value  = nombre;
-    document.getElementById('whatsappInput').value = wsp;
-    document.getElementById('crmSugg').style.display = 'none';
-    document.getElementById('clienteInput').style.borderColor = 'var(--success)';
-}
+// ── Stats hoy ─────────────────────────────────────
 async function cargarStatsHoy() {
     try {
         const res  = await fetch('/pos/ventas_hoy');
@@ -723,136 +668,78 @@ async function cargarStatsHoy() {
         document.getElementById('statTotal').textContent = `$${data.total.toFixed(0)}`;
     } catch {}
 }
-
 cargarStatsHoy();
 setInterval(cargarStatsHoy, 30000);
 
-// ── MODO OFFLINE ────────────────────────────────
+// ── MODO OFFLINE ──────────────────────────────────
 const OFFLINE_DB_NAME = 'driveflow-offline';
-
 function abrirOfflineDB() {
-    return new Promise((resolve, reject) => {
-        const req = indexedDB.open(OFFLINE_DB_NAME, 1);
-        req.onupgradeneeded = e => e.target.result.createObjectStore('ventas', { keyPath: 'id', autoIncrement: true });
-        req.onsuccess = e => resolve(e.target.result);
+    return new Promise((resolve,reject)=>{
+        const req = indexedDB.open(OFFLINE_DB_NAME,1);
+        req.onupgradeneeded = e=>e.target.result.createObjectStore('ventas',{keyPath:'id',autoIncrement:true});
+        req.onsuccess = e=>resolve(e.target.result);
         req.onerror   = reject;
     });
 }
-
 async function contarPendientes() {
     try {
-        const db  = await abrirOfflineDB();
-        const tx  = db.transaction('ventas', 'readonly');
-        const req = tx.objectStore('ventas').count();
-        return await new Promise(r => { req.onsuccess = () => r(req.result); req.onerror = () => r(0); });
-    } catch { return 0; }
+        const db=await abrirOfflineDB();
+        const tx=db.transaction('ventas','readonly');
+        const req=tx.objectStore('ventas').count();
+        return await new Promise(r=>{req.onsuccess=()=>r(req.result);req.onerror=()=>r(0);});
+    } catch{return 0;}
 }
-
 async function actualizarEstadoConexion() {
-    const online    = navigator.onLine;
-    const pending   = await contarPendientes();
-    const chip      = document.getElementById('statusChip');
-    const dot       = document.getElementById('statusDot');
-    const txt       = document.getElementById('statusText');
-    const badge     = document.getElementById('pendingBadge');
-    const bar       = document.getElementById('offlineBar');
-    const btnSync   = document.getElementById('btnSync');
-    const pendCount = document.getElementById('pendingCount');
-
+    const online  = navigator.onLine;
+    const pending = await contarPendientes();
+    const chip    = document.getElementById('statusChip');
+    const dot     = document.getElementById('statusDot');
+    const txt     = document.getElementById('statusText');
+    const badge   = document.getElementById('pendingBadge');
+    const bar     = document.getElementById('offlineBar');
+    const btnSync = document.getElementById('btnSync');
+    const pc      = document.getElementById('pendingCount');
     if (online) {
-        chip.className  = 'status-chip status-online';
-        dot.className   = 'online-dot';
-        txt.textContent = 'En línea';
-        bar.classList.remove('show');
-        btnSync.style.display = pending > 0 ? 'flex' : 'none';
+        chip.className='status-chip status-online'; dot.className='online-dot';
+        txt.textContent='En línea'; bar.classList.remove('show');
+        btnSync.style.display = pending>0?'flex':'none';
     } else {
-        chip.className  = 'status-chip status-offline';
-        dot.className   = 'offline-dot';
-        txt.textContent = 'Sin conexión';
-        bar.classList.add('show');
-        btnSync.style.display = 'none';
+        chip.className='status-chip status-offline'; dot.className='offline-dot';
+        txt.textContent='Sin conexión'; bar.classList.add('show');
+        btnSync.style.display='none';
     }
-
-    if (pending > 0) {
-        badge.style.display = 'inline';
-        badge.textContent   = pending;
-        pendCount.textContent = `(${pending} venta${pending > 1 ? 's' : ''} pendiente${pending > 1 ? 's' : ''})`;
-    } else {
-        badge.style.display = 'none';
-        pendCount.textContent = '';
-    }
+    if (pending>0) { badge.style.display='inline'; badge.textContent=pending; pc.textContent=`(${pending} pendiente${pending>1?'s':''})`; }
+    else { badge.style.display='none'; pc.textContent=''; }
 }
-
 async function sincronizarAhora() {
-    const btn = document.getElementById('btnSync');
-    btn.textContent = '⏳ Sincronizando...';
-    btn.disabled    = true;
-
+    const btn=document.getElementById('btnSync');
+    btn.textContent='⏳ Sincronizando...'; btn.disabled=true;
     try {
-        const db     = await abrirOfflineDB();
-        const tx     = db.transaction('ventas', 'readonly');
-        const ventas = await new Promise(r => {
-            const all = []; const cursor = tx.objectStore('ventas').openCursor();
-            cursor.onsuccess = e => {
-                if (e.target.result) { all.push({id: e.target.result.key, ...e.target.result.value}); e.target.result.continue(); }
-                else r(all);
-            };
+        const db=await abrirOfflineDB();
+        const tx=db.transaction('ventas','readonly');
+        const ventas=await new Promise(r=>{
+            const all=[];const cursor=tx.objectStore('ventas').openCursor();
+            cursor.onsuccess=e=>{if(e.target.result){all.push({id:e.target.result.key,...e.target.result.value});e.target.result.continue();}else r(all);};
         });
-
-        let ok = 0;
-        for (const v of ventas) {
-            try {
-                const { id, timestamp, ...datos } = v;
-                const res = await fetch('/pos/vender', {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify(datos)
-                });
-                const data = await res.json();
-                if (data.ok) {
-                    const tx2 = db.transaction('ventas', 'readwrite');
-                    tx2.objectStore('ventas').delete(id);
-                    ok++;
-                }
-            } catch {}
+        let ok=0;
+        for(const v of ventas){
+            try{
+                const {id,timestamp,...datos}=v;
+                const res=await fetch('/pos/vender',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(datos)});
+                const data=await res.json();
+                if(data.ok){const tx2=db.transaction('ventas','readwrite');tx2.objectStore('ventas').delete(id);ok++;}
+            }catch{}
         }
-
-        if (ok > 0) toast(`✅ ${ok} venta${ok>1?'s':''} sincronizada${ok>1?'s':''}`, 'success');
-        else toast('⚠️ No se pudo sincronizar. Intenta más tarde.', 'warning');
-    } catch(e) {
-        toast('❌ Error al sincronizar.', 'danger');
-    } finally {
-        btn.disabled    = false;
-        btn.textContent = '🔄 Sincronizar';
-        actualizarEstadoConexion();
-        cargarStatsHoy();
-    }
+        if(ok>0) toast(`✅ ${ok} venta${ok>1?'s':''} sincronizada${ok>1?'s':''}`, 'success');
+        else toast('⚠️ No se pudo sincronizar','warning');
+    } catch{toast('❌ Error al sincronizar','danger');}
+    finally{btn.disabled=false;btn.textContent='🔄 Sincronizar';actualizarEstadoConexion();cargarStatsHoy();}
 }
-
-// Escuchar cambios de conexión
-window.addEventListener('online',  () => { actualizarEstadoConexion(); sincronizarAhora(); });
-window.addEventListener('offline', () => actualizarEstadoConexion());
-
-// Escuchar mensajes del SW
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', e => {
-        if (e.data.type === 'SYNC_DONE' && e.data.count > 0) {
-            toast(`✅ ${e.data.count} venta${e.data.count>1?'s':''} sincronizada${e.data.count>1?'s':''}`, 'success');
-            actualizarEstadoConexion();
-            cargarStatsHoy();
-        }
-    });
-    navigator.serviceWorker.register('/static/sw.js');
-}
-
-// Mostrar mensaje especial si la venta fue offline
-const _procesarOriginal = procesarVenta;
-// Override para mostrar aviso offline en ticket
-const _mostrarOriginal = mostrarTicket;
-
-// Estado inicial
+window.addEventListener('online',()=>{actualizarEstadoConexion();sincronizarAhora();});
+window.addEventListener('offline',()=>actualizarEstadoConexion());
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');
 actualizarEstadoConexion();
-setInterval(actualizarEstadoConexion, 10000);
+setInterval(actualizarEstadoConexion,10000);
 </script>
 </body>
 </html>
