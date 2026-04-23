@@ -32,8 +32,6 @@
         <a href="/ventas" class="btn-alerta" style="text-decoration:none">💰 Ventas</a>
         <a href="/caja" class="btn-alerta" style="text-decoration:none">💵 Caja</a>
         <a href="/gastos" class="btn-alerta" style="text-decoration:none">💸 Gastos</a>
-        <a href="/clientes" class="btn-alerta" style="text-decoration:none">👥 Clientes</a>
-        <a href="/devoluciones" class="btn-alerta" style="text-decoration:none">↩️ Devoluciones</a>
         <a href="/historial" class="btn-alerta" style="text-decoration:none">📋 Historial</a>
         <a href="/proveedores" class="btn-alerta" style="text-decoration:none">🚚 Proveedores</a>
         <button class="btn-alerta" onclick="toggleCalc()" title="Calculadora de precios">🧮</button>
@@ -64,11 +62,6 @@
 <div id="toasts"></div>
 
 <div class="container">
-
-    <header class="site-header">
-        <h1 class="logo-main">DRIVE<span>FLOW</span> <em>PRO</em></h1>
-        <p class="tagline">Panel de Control · Inventario Inteligente</p>
-    </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
